@@ -28,7 +28,7 @@ export function LoginForm() {
 
     try {
       // Hardcoded admin login for immediate access
-      if (email === "admin@ecocred.in" && password === "praveengayfr" && activeTab === "admin") {
+      if (email === "admin@ecocred.in" && password === "bhanubhaai" && activeTab === "admin") {
         const adminUser = {
           id: "admin1",
           email: "admin@ecocred.in",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { uploadImage } from '@/lib/minio'
 import { saveImageUpload } from '@/lib/database'
+import { writeFile, mkdir } from 'fs/promises'
+import { join } from 'path'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,10 +27,23 @@ export async function POST(request: NextRequest) {
     // Convert file to buffer
     const buffer = Buffer.from(await file.arrayBuffer())
     
-    // Upload to MinIO
-    const imageUrl = await uploadImage(buffer, file.name, file.type)
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = join(process.cwd(), 'public', 'uploads', 'task-images')
+    await mkdir(uploadsDir, { recursive: true })
     
-    // Get user info from request (you might want to pass this from the client)
+    // Generate unique filename
+    const timestamp = Date.now()
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+    const fileName = `${timestamp}-${sanitizedName}`
+    const filePath = join(uploadsDir, fileName)
+    
+    // Save file to public/uploads
+    await writeFile(filePath, buffer)
+    
+    // Generate public URL
+    const imageUrl = `/uploads/task-images/${fileName}`
+    
+    // Get user info from request
     const uploadedBy = formData.get('uploadedBy') as string || 'anonymous'
     const taskId = formData.get('taskId') as string || undefined
     const submissionId = formData.get('submissionId') as string || undefined
