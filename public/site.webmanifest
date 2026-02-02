@@ -1,0 +1,21 @@
+{
+  "name": "EcoCred Web",
+  "short_name": "EcoCred",
+  "description": "Gamified Environmental Education Platform",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#00B15D",
+  "background_color": "#F7FCF9",
+  "display": "standalone",
+  "start_url": "/"
+}

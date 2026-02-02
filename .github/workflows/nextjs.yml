@@ -1,0 +1,50 @@
+name: Next.js CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Setup Node.js (LTS or your version)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # Install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # Run linting (soft fail, logs warnings/errors but doesn't block build)
+      - name: Run lint
+        run: npm run lint || echo "Lint errors found, skipping failure"
+
+      # Run tests (if you have Jest/Playwright/etc.)
+      - name: Run tests
+        run: npm test --if-present
+
+      # Build Next.js app (production mode)
+      - name: Build Next.js
+        run: npm run build
+
+      # Start Next.js in background and test rendering
+      - name: Start Next.js server
+        run: |
+          nohup npm start & 
+          sleep 10
+
+      # Verify that app responds (simple HTTP request check)
+      - name: Check if homepage renders
+        run: |
+          curl -f http://localhost:3000 || exit 1
