@@ -22,11 +22,15 @@ export function InteractiveMap() {
   const [mapPoints, setMapPoints] = useState<MapPoint[]>([])
   const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null)
   const [filter, setFilter] = useState<string>("all")
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     // Generate map points from approved submissions with real data
     const loadMapData = async () => {
       try {
+        setIsLoading(true)
+        setError(null)
         const submissions = await getSubmissions()
         const tasks = await getTasks()
         const users = await getUsers()
@@ -78,8 +82,16 @@ export function InteractiveMap() {
         })
 
         setMapPoints(points)
+        setIsLoading(false)
+        
+        // If no points, show info message
+        if (points.length === 0) {
+          setError("No environmental actions to display yet. Complete and approve tasks to see them on the map!")
+        }
       } catch (error) {
         console.error('Error loading map data:', error)
+        setError("Failed to load map data. Please refresh the page.")
+        setIsLoading(false)
       }
     }
 
@@ -185,6 +197,25 @@ export function InteractiveMap() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center h-96">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading map data...</p>
+                </div>
+              </div>
+            ) : error && mapPoints.length === 0 ? (
+              <div className="flex items-center justify-center h-96">
+                <div className="text-center max-w-md">
+                  <MapPin className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-lg font-semibold mb-2">No Environmental Actions Yet</p>
+                  <p className="text-muted-foreground mb-4">{error}</p>
+                  <Button onClick={() => window.location.reload()}>
+                    Refresh Map
+                  </Button>
+                </div>
+              </div>
+            ) : (
             <div className="relative bg-gradient-to-br from-green-50 to-blue-50 rounded-lg h-96 overflow-hidden">
               {/* Simulated World Map Background */}
               <div className="absolute inset-0 opacity-20">
@@ -245,6 +276,7 @@ export function InteractiveMap() {
                 </div>
               </div>
             </div>
+            )}
           </CardContent>
         </Card>
 
