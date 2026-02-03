@@ -49,12 +49,10 @@ export function Footer() {
             <h3 className="font-semibold text-lg">Made by Team EduVerse</h3>
             <div className="space-y-2 text-sm">
               <div className="grid grid-cols-2 gap-2">
-                <div className="text-primary-foreground/80">Sudheer</div>
-                <div className="text-primary-foreground/80">Nischal</div>
-                <div className="text-primary-foreground/80">Praveen</div>
-                <div className="text-primary-foreground/80">Kushaal</div>
-                <div className="text-primary-foreground/80">Sindhuja</div>
-                <div className="text-primary-foreground/80">Sainandhan</div>
+                <div className="text-primary-foreground/80">Bhanu Prakash</div>
+                <div className="text-primary-foreground/80">Kishore K </div>
+                <div className="text-primary-foreground/80">30</div>
+                <div className="text-primary-foreground/80">Kalki</div>
               </div>
             </div>
             <div className="pt-4 border-t border-primary-foreground/20">
