@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
 import { AuthGuard } from "@/components/auth/auth-guard"
@@ -33,8 +33,9 @@ import {
   getUsers,
   getCompletedLessonsCount,
   getLessons,
+  saveUser,
 } from "@/lib/storage-api"
-import type { User, Task, Submission, Lesson } from "@/lib/storage-api"
+import type { User, Task, Submission, Lesson, Badge as BadgeType } from "@/lib/storage-api"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { BadgeSystem } from "@/components/gamification/badge-system"
@@ -46,6 +47,8 @@ import { SeasonalEvents } from "@/components/seasonal-events"
 import { Announcements } from "@/components/announcements"
 import { ProfileCard } from "@/components/avatar"
 import { StudentProfile } from "@/components/student-profile"
+import { useBadgeChecker } from "@/hooks/use-badge-checker"
+import { AchievementPopup } from "@/components/celebrations/achievement-popup"
 
 export default function StudentPortal() {
   return (
@@ -62,6 +65,7 @@ function StudentDashboard() {
   const [leaderboard, setLeaderboard] = useState<User[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [completedLessonsCount, setCompletedLessonsCount] = useState(0)
+  const [showAchievement, setShowAchievement] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -103,6 +107,36 @@ function StudentDashboard() {
 
     loadData()
   }, [])
+
+  // Badge checker hook - monitors for newly earned badges
+  const handleBadgeEarned = useCallback(async (badge: BadgeType) => {
+    // Add badge to user's badges array in database
+    if (user && !user.badges?.includes(badge.id)) {
+      const updatedUser = {
+        ...user,
+        badges: [...(user.badges || []), badge.id]
+      }
+      try {
+        await saveUser(updatedUser)
+        setCurrentUser(updatedUser)
+        setUser(updatedUser)
+      } catch (error) {
+        console.error('Error saving badge to user:', error)
+      }
+    }
+    setShowAchievement(true)
+  }, [user])
+
+  const { newlyEarnedBadge, clearNewlyEarnedBadge } = useBadgeChecker({
+    user,
+    submissions,
+    onBadgeEarned: handleBadgeEarned
+  })
+
+  const handleCloseAchievement = () => {
+    setShowAchievement(false)
+    clearNewlyEarnedBadge()
+  }
 
   const handleLogout = () => {
     setCurrentUser(null)
@@ -153,6 +187,13 @@ function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Achievement Celebration Popup */}
+      <AchievementPopup
+        badge={newlyEarnedBadge}
+        isOpen={showAchievement}
+        onClose={handleCloseAchievement}
+      />
+
       <Navigation />
 
       {/* Header */}

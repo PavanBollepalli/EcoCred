@@ -41,8 +41,10 @@ import {
   getCompletedLessonsCount,
   getLessons,
   deleteLesson,
+  getBadges,
+  deleteBadge,
 } from "@/lib/storage-api"
-import type { User, Task, Submission, Lesson } from "@/lib/storage-api"
+import type { User, Task, Submission, Lesson, Badge as BadgeData } from "@/lib/storage-api"
 import { Calendar } from "@/components/calendar"
 import { SeasonalEvents } from "@/components/seasonal-events"
 import { Announcements } from "@/components/announcements"
@@ -63,6 +65,7 @@ function TeacherDashboard() {
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [students, setStudents] = useState<User[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
+  const [badges, setBadges] = useState<BadgeData[]>([])
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null)
   const [selectedStudent, setSelectedStudent] = useState<User | null>(null)
   const [reviewComment, setReviewComment] = useState("")
@@ -78,12 +81,14 @@ function TeacherDashboard() {
       const allUsers = await getUsers()
       const studentUsers = allUsers.filter((u) => u.role === "student")
       const allLessons = await getLessons()
+      const allBadges = await getBadges()
 
       setUser(currentUser)
       setTasks(allTasks)
       setSubmissions(allSubmissions)
       setStudents(studentUsers)
       setLessons(allLessons)
+      setBadges(allBadges)
     } catch (error) {
       console.error('Error loading teacher data:', error)
     }
@@ -214,6 +219,7 @@ function TeacherDashboard() {
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
             <TabsTrigger value="lessons">Lessons</TabsTrigger>
+            <TabsTrigger value="badges">Badges</TabsTrigger>
             <TabsTrigger value="events">Events</TabsTrigger>
             <TabsTrigger value="announcements">Announcements</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
@@ -715,7 +721,7 @@ function TeacherDashboard() {
                                   <div>
                                     <p className="font-semibold text-sm">AI Verification</p>
                                     <p className={`text-lg font-bold ${selectedSubmission.mlConfidence >= 80 ? 'text-green-600' :
-                                        selectedSubmission.mlConfidence >= 50 ? 'text-yellow-600' : 'text-red-600'
+                                      selectedSubmission.mlConfidence >= 50 ? 'text-yellow-600' : 'text-red-600'
                                       }`}>
                                       {selectedSubmission.mlConfidence}% Confidence
                                     </p>
@@ -1116,6 +1122,119 @@ function TeacherDashboard() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          {/* Badges Tab */}
+          <TabsContent value="badges" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Badge Management</h2>
+                <p className="text-muted-foreground">Create and manage achievement badges for students</p>
+              </div>
+              <Button className="bg-green-600 hover:bg-green-700" asChild>
+                <Link href="/teacher/create-badge">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Badge
+                </Link>
+              </Button>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {/* Create New Badge Card */}
+              <Card className="border-dashed border-2 hover:border-primary transition-colors cursor-pointer" onClick={() => router.push('/teacher/create-badge')}>
+                <CardContent className="flex flex-col items-center justify-center py-8">
+                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                    <Plus className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-semibold text-lg">Create New Badge</h3>
+                  <p className="text-muted-foreground text-sm text-center mt-1">Design a custom achievement badge</p>
+                </CardContent>
+              </Card>
+
+              {/* Dynamic badges from database */}
+              {badges.map((badge) => {
+                // Icon mapping
+                const iconMap: { [key: string]: any } = {
+                  Trophy: Award,
+                  Star: Award,
+                  Award: Award,
+                  TreePine: TreePine,
+                  Recycle: Recycle,
+                  Zap: Zap,
+                  Droplets: Droplets,
+                  Flame: Award,
+                  Target: Award,
+                  Medal: Award,
+                  Crown: Award,
+                  Gem: Award,
+                  Heart: Award,
+                  Sparkles: Award,
+                }
+                const IconComponent = iconMap[badge.icon] || Award
+
+                // Requirement label
+                const reqLabels: { [key: string]: string } = {
+                  points: `${badge.requirement.value} points`,
+                  tasks: `${badge.requirement.value} tasks`,
+                  lessons: `${badge.requirement.value} lessons`,
+                  streak: `${badge.requirement.value}-day streak`,
+                  category_tasks: `${badge.requirement.value} ${badge.requirement.category || ''} tasks`,
+                }
+
+                return (
+                  <Card key={badge.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center space-x-4">
+                        <div className={`w-14 h-14 rounded-full ${badge.color} flex items-center justify-center`}>
+                          <IconComponent className="h-7 w-7 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold">{badge.name}</h3>
+                          <p className="text-sm text-muted-foreground">{badge.description || 'No description'}</p>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex items-center justify-between">
+                        <span className="inline-block px-2 py-1 bg-primary/10 text-primary rounded text-xs">
+                          {reqLabels[badge.requirement.type] || `${badge.requirement.value}`}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={async () => {
+                            if (confirm('Are you sure you want to delete this badge?')) {
+                              try {
+                                await deleteBadge(badge.id)
+                                setBadges(badges.filter(b => b.id !== badge.id))
+                              } catch (error) {
+                                console.error('Failed to delete badge:', error)
+                              }
+                            }
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+
+              {/* Empty state */}
+              {badges.length === 0 && (
+                <Card className="col-span-full">
+                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                    <Award className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="font-semibold text-lg mb-1">No Badges Created Yet</h3>
+                    <p className="text-muted-foreground mb-4">Create your first badge to motivate students!</p>
+                    <Button onClick={() => router.push('/teacher/create-badge')} className="bg-green-600 hover:bg-green-700">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create First Badge
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </TabsContent>
 
           {/* Events Tab */}

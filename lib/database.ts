@@ -2,7 +2,7 @@ import { getDatabase } from './mongodb'
 
 // Re-export getDatabase for API routes
 export { getDatabase }
-import type { User, Task, Submission, GlobalStats, LessonProgress, School, CalendarEvent, SeasonalEvent, Announcement, ImageUpload, Lesson } from './types'
+import type { User, Task, Submission, GlobalStats, LessonProgress, School, CalendarEvent, SeasonalEvent, Announcement, ImageUpload, Lesson, Badge } from './types'
 
 // User management
 export async function getUsers(): Promise<User[]> {
@@ -727,6 +727,85 @@ export async function getLessonsByTeacher(teacherId: string): Promise<Lesson[]> 
     return lessons.map(lesson => ({ ...lesson, _id: undefined }))
   } catch (error) {
     console.error('Error fetching lessons by teacher:', error)
+    return []
+  }
+}
+
+// ===== BADGE MANAGEMENT =====
+
+export async function getBadges(schoolId?: string): Promise<Badge[]> {
+  try {
+    const db = await getDatabase()
+    const filter: any = { isActive: true }
+    if (schoolId) filter.schoolId = schoolId
+    const badges = await db.collection<Badge>('badges').find(filter).sort({ createdAt: -1 }).toArray()
+    return badges.map(badge => ({ ...badge, _id: undefined }))
+  } catch (error) {
+    console.error('Error fetching badges:', error)
+    return []
+  }
+}
+
+export async function getBadgeById(id: string): Promise<Badge | null> {
+  try {
+    const db = await getDatabase()
+    const badge = await db.collection<Badge>('badges').findOne({ id })
+    if (badge) {
+      return { ...badge, _id: undefined }
+    }
+    return null
+  } catch (error) {
+    console.error('Error fetching badge:', error)
+    return null
+  }
+}
+
+export async function saveBadge(badge: Badge): Promise<void> {
+  try {
+    const db = await getDatabase()
+    await db.collection<Badge>('badges').replaceOne(
+      { id: badge.id },
+      badge,
+      { upsert: true }
+    )
+  } catch (error) {
+    console.error('Error saving badge:', error)
+    throw error
+  }
+}
+
+export async function deleteBadge(id: string): Promise<void> {
+  try {
+    const db = await getDatabase()
+    const result = await db.collection<Badge>('badges').deleteOne({ id })
+    if (result.deletedCount === 0) {
+      throw new Error('Badge not found')
+    }
+  } catch (error) {
+    console.error('Error deleting badge:', error)
+    throw error
+  }
+}
+
+export async function getBadgesByTeacher(teacherId: string): Promise<Badge[]> {
+  try {
+    const db = await getDatabase()
+    const badges = await db.collection<Badge>('badges').find({ createdBy: teacherId }).sort({ createdAt: -1 }).toArray()
+    return badges.map(badge => ({ ...badge, _id: undefined }))
+  } catch (error) {
+    console.error('Error fetching badges by teacher:', error)
+    return []
+  }
+}
+
+// Get all badges including inactive for admin purposes
+export async function getAllBadges(): Promise<Badge[]> {
+  try {
+    const db = await getDatabase()
+    const badges = await db.collection<Badge>('badges').find({}).sort({ createdAt: -1 }).toArray()
+    return badges.map(badge => ({ ...badge, _id: undefined }))
+  } catch (error) {
+    console.error('Error fetching all badges:', error)
     return []
   }
 }

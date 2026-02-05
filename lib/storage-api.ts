@@ -597,3 +597,56 @@ export const deleteLesson = async (lessonId: string): Promise<void> => {
   }
 }
 
+// ===== BADGE MANAGEMENT =====
+
+export interface Badge {
+  id: string
+  name: string
+  description: string
+  icon: string
+  color: string
+  requirement: {
+    type: "points" | "tasks" | "lessons" | "streak" | "category_tasks"
+    value: number
+    category?: "planting" | "waste" | "energy" | "water"
+  }
+  createdBy: string
+  schoolId?: string
+  isActive: boolean
+  createdAt: string
+  updatedAt?: string
+}
+
+export const getBadges = async (schoolId?: string): Promise<Badge[]> => {
+  try {
+    const url = schoolId ? `/api/badges?schoolId=${schoolId}` : '/api/badges'
+    return await apiCall(url)
+  } catch (error) {
+    console.error('Error fetching badges:', error)
+    return []
+  }
+}
+
+export const saveBadge = async (badge: Partial<Badge>): Promise<Badge> => {
+  try {
+    const result = await apiCall('/api/badges', {
+      method: 'POST',
+      body: JSON.stringify(badge),
+    })
+    return result.badge
+  } catch (error) {
+    console.error('Error saving badge:', error)
+    throw error
+  }
+}
+
+export const deleteBadge = async (badgeId: string): Promise<void> => {
+  try {
+    await apiCall(`/api/badges?id=${badgeId}`, {
+      method: 'DELETE',
+    })
+  } catch (error) {
+    console.error('Error deleting badge:', error)
+    throw error
+  }
+}

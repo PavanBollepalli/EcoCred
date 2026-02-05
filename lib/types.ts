@@ -177,3 +177,34 @@ export interface Lesson {
   updatedAt: string
 }
 
+// Badge requirement types
+export type BadgeRequirementType = "points" | "tasks" | "lessons" | "streak" | "category_tasks"
+
+export interface BadgeRequirement {
+  type: BadgeRequirementType
+  value: number
+  category?: "planting" | "waste" | "energy" | "water"
+}
+
+// Dynamic Badge created by teachers
+export interface Badge {
+  _id?: ObjectId
+  id: string
+  name: string
+  description: string
+  icon: string // Icon name from lucide-react (e.g., "Trophy", "Star", "Award")
+  color: string // Tailwind color class (e.g., "bg-green-500")
+  requirement: BadgeRequirement
+  createdBy: string
+  schoolId?: string
+  isActive: boolean
+  createdAt: string
+  updatedAt?: string
+}
+
+// For tracking newly earned badges
+export interface EarnedBadge {
+  badgeId: string
+  badge: Badge
+  earnedAt: string
+}

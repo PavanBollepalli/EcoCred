@@ -1,11 +1,29 @@
 "use client"
 
 import type React from "react"
-
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Award, Star, Trophy, Flame, TreePine, Recycle, Zap, Droplets } from "lucide-react"
+import { Award, Star, Trophy, Flame, TreePine, Recycle, Zap, Droplets, Medal, Crown, Gem, Heart, Sparkles, Target } from "lucide-react"
+
+// Icon mapping for dynamic badges
+const ICON_MAP: { [key: string]: React.ComponentType<{ className?: string }> } = {
+  Trophy,
+  Star,
+  Award,
+  TreePine,
+  Recycle,
+  Zap,
+  Droplets,
+  Flame,
+  Target,
+  Medal,
+  Crown,
+  Gem,
+  Heart,
+  Sparkles,
+}
 
 interface BadgeDefinition {
   id: string
@@ -13,17 +31,20 @@ interface BadgeDefinition {
   description: string
   icon: React.ReactNode
   requirement: number
+  requirementType?: string
   category?: string
   color: string
 }
 
-const BADGE_DEFINITIONS: BadgeDefinition[] = [
+// Default static badges (fallback)
+const STATIC_BADGE_DEFINITIONS: BadgeDefinition[] = [
   {
     id: "first-step",
     name: "First Step",
     description: "Complete your first environmental task",
     icon: <Star className="h-4 w-4" />,
     requirement: 1,
+    requirementType: "tasks",
     color: "bg-blue-500",
   },
   {
@@ -32,6 +53,7 @@ const BADGE_DEFINITIONS: BadgeDefinition[] = [
     description: "Earn 100 eco-points",
     icon: <Award className="h-4 w-4" />,
     requirement: 100,
+    requirementType: "points",
     color: "bg-green-500",
   },
   {
@@ -40,6 +62,7 @@ const BADGE_DEFINITIONS: BadgeDefinition[] = [
     description: "Complete 5 tree planting tasks",
     icon: <TreePine className="h-4 w-4" />,
     requirement: 5,
+    requirementType: "category_tasks",
     category: "planting",
     color: "bg-emerald-500",
   },
@@ -49,6 +72,7 @@ const BADGE_DEFINITIONS: BadgeDefinition[] = [
     description: "Complete 5 waste management tasks",
     icon: <Recycle className="h-4 w-4" />,
     requirement: 5,
+    requirementType: "category_tasks",
     category: "waste",
     color: "bg-lime-500",
   },
@@ -58,6 +82,7 @@ const BADGE_DEFINITIONS: BadgeDefinition[] = [
     description: "Complete 5 energy conservation tasks",
     icon: <Zap className="h-4 w-4" />,
     requirement: 5,
+    requirementType: "category_tasks",
     category: "energy",
     color: "bg-yellow-500",
   },
@@ -67,6 +92,7 @@ const BADGE_DEFINITIONS: BadgeDefinition[] = [
     description: "Complete 5 water conservation tasks",
     icon: <Droplets className="h-4 w-4" />,
     requirement: 5,
+    requirementType: "category_tasks",
     category: "water",
     color: "bg-blue-500",
   },
@@ -76,6 +102,7 @@ const BADGE_DEFINITIONS: BadgeDefinition[] = [
     description: "Maintain a 7-day activity streak",
     icon: <Flame className="h-4 w-4" />,
     requirement: 7,
+    requirementType: "streak",
     color: "bg-orange-500",
   },
   {
@@ -84,6 +111,7 @@ const BADGE_DEFINITIONS: BadgeDefinition[] = [
     description: "Earn 500 eco-points",
     icon: <Trophy className="h-4 w-4" />,
     requirement: 500,
+    requirementType: "points",
     color: "bg-purple-500",
   },
 ]
@@ -96,43 +124,105 @@ interface BadgeSystemProps {
 }
 
 export function BadgeSystem({ userPoints, userBadges, completedTasks, streak }: BadgeSystemProps) {
+  const [dynamicBadges, setDynamicBadges] = useState<BadgeDefinition[]>([])
+
+  // Fetch dynamic badges from API
+  useEffect(() => {
+    async function fetchBadges() {
+      try {
+        const response = await fetch('/api/badges')
+        if (response.ok) {
+          const badges = await response.json()
+          // Convert dynamic badges to BadgeDefinition format
+          const converted: BadgeDefinition[] = badges.map((badge: any) => {
+            const IconComponent = ICON_MAP[badge.icon] || Award
+            return {
+              id: badge.id,
+              name: badge.name,
+              description: badge.description || '',
+              icon: <IconComponent className="h-4 w-4" />,
+              requirement: badge.requirement.value,
+              requirementType: badge.requirement.type,
+              category: badge.requirement.category,
+              color: badge.color,
+            }
+          })
+          setDynamicBadges(converted)
+        }
+      } catch (error) {
+        console.error('Error fetching badges:', error)
+      }
+    }
+    fetchBadges()
+  }, [])
+
+  // Combine static and dynamic badges
+  const allBadges = [...STATIC_BADGE_DEFINITIONS, ...dynamicBadges]
+
   const getBadgeProgress = (badge: BadgeDefinition) => {
     let current = 0
+    const totalTasks = Object.values(completedTasks).reduce((sum, count) => sum + count, 0)
 
-    switch (badge.id) {
-      case "first-step":
-        current = Object.values(completedTasks).reduce((sum, count) => sum + count, 0) > 0 ? 1 : 0
-        break
-      case "eco-warrior":
-      case "champion":
+    switch (badge.requirementType) {
+      case "points":
         current = userPoints
         break
-      case "tree-hugger":
-        current = completedTasks.planting || 0
+      case "tasks":
+        current = totalTasks
         break
-      case "waste-warrior":
-        current = completedTasks.waste || 0
+      case "lessons":
+        // TODO: Add lessons count when available
+        current = 0
         break
-      case "energy-saver":
-        current = completedTasks.energy || 0
-        break
-      case "water-guardian":
-        current = completedTasks.water || 0
-        break
-      case "streak-master":
+      case "streak":
         current = streak
         break
+      case "category_tasks":
+        if (badge.category) {
+          current = completedTasks[badge.category] || 0
+        }
+        break
       default:
-        current = 0
+        // Fallback for old badge IDs
+        switch (badge.id) {
+          case "first-step":
+            current = totalTasks > 0 ? 1 : 0
+            break
+          case "eco-warrior":
+          case "champion":
+            current = userPoints
+            break
+          case "tree-hugger":
+            current = completedTasks.planting || 0
+            break
+          case "waste-warrior":
+            current = completedTasks.waste || 0
+            break
+          case "energy-saver":
+            current = completedTasks.energy || 0
+            break
+          case "water-guardian":
+            current = completedTasks.water || 0
+            break
+          case "streak-master":
+            current = streak
+            break
+        }
     }
 
     return Math.min(current, badge.requirement)
   }
 
-  const isEarned = (badgeId: string) => userBadges.includes(badgeId)
+  const isEarned = (badge: BadgeDefinition) => {
+    // Check if badge is in user's badges array
+    if (userBadges.includes(badge.id)) return true
+    // Also check if progress meets requirement (for auto-earned)
+    const progress = getBadgeProgress(badge)
+    return progress >= badge.requirement
+  }
 
-  const earnedBadges = BADGE_DEFINITIONS.filter((badge) => isEarned(badge.id))
-  const availableBadges = BADGE_DEFINITIONS.filter((badge) => !isEarned(badge.id))
+  const earnedBadges = allBadges.filter((badge) => isEarned(badge))
+  const availableBadges = allBadges.filter((badge) => !isEarned(badge))
 
   return (
     <div className="space-y-6">
@@ -175,37 +265,43 @@ export function BadgeSystem({ userPoints, userBadges, completedTasks, streak }: 
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {availableBadges.map((badge) => {
-              const progress = getBadgeProgress(badge)
-              const progressPercentage = (progress / badge.requirement) * 100
+          {availableBadges.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">
+              🎉 Congratulations! You've earned all available badges!
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {availableBadges.map((badge) => {
+                const progress = getBadgeProgress(badge)
+                const progressPercentage = (progress / badge.requirement) * 100
 
-              return (
-                <div key={badge.id} className="p-4 rounded-lg border">
-                  <div className="flex items-start space-x-3">
-                    <div
-                      className={`w-10 h-10 rounded-full ${badge.color} flex items-center justify-center opacity-60`}
-                    >
-                      <div className="text-white">{badge.icon}</div>
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-sm mb-1">{badge.name}</h4>
-                      <p className="text-xs text-muted-foreground mb-2">{badge.description}</p>
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span>
-                            Progress: {progress}/{badge.requirement}
-                          </span>
-                          <span>{Math.round(progressPercentage)}%</span>
+                return (
+                  <div key={badge.id} className="p-4 rounded-lg border">
+                    <div className="flex items-start space-x-3">
+                      <div
+                        className={`w-10 h-10 rounded-full ${badge.color} flex items-center justify-center opacity-60`}
+                      >
+                        <div className="text-white">{badge.icon}</div>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-sm mb-1">{badge.name}</h4>
+                        <p className="text-xs text-muted-foreground mb-2">{badge.description}</p>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span>
+                              Progress: {progress}/{badge.requirement}
+                            </span>
+                            <span>{Math.round(progressPercentage)}%</span>
+                          </div>
+                          <Progress value={progressPercentage} className="h-2" />
                         </div>
-                        <Progress value={progressPercentage} className="h-2" />
                       </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
