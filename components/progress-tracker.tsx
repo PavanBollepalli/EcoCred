@@ -5,11 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { 
-  Trophy, 
-  Target, 
-  Calendar, 
-  TrendingUp, 
+import {
+  Trophy,
+  Target,
+  Calendar,
+  TrendingUp,
   Award,
   TreePine,
   Recycle,
@@ -18,7 +18,7 @@ import {
   BookOpen,
   CheckCircle
 } from "lucide-react"
-import { getCurrentUserFromSession, getSubmissions, getTasks, getCompletedLessonsCount } from "@/lib/storage-api"
+import { getCurrentUserFromSession, getCurrentUser, setCurrentUser, getSubmissions, getTasks, getCompletedLessonsCount } from "@/lib/storage-api"
 import type { User, Submission, Task } from "@/lib/storage-api"
 
 interface ProgressStats {
@@ -39,8 +39,17 @@ export function ProgressTracker() {
   useEffect(() => {
     const loadProgressData = async () => {
       try {
-        const currentUser = getCurrentUserFromSession()
-        if (!currentUser) return
+        // Get user ID from session, then fetch fresh data from API
+        const sessionUser = getCurrentUserFromSession()
+        if (!sessionUser) return
+
+        // Fetch fresh user data from database
+        const freshUser = await getCurrentUser(sessionUser.id)
+        const currentUser = freshUser || sessionUser
+
+        if (freshUser) {
+          setCurrentUser(freshUser) // Update session with fresh data
+        }
 
         setUser(currentUser)
 
@@ -51,7 +60,7 @@ export function ProgressTracker() {
         ])
 
         const userSubmissions = submissions.filter(s => s.studentId === currentUser.id && s.status === "approved")
-        
+
         const tasksByCategory = userSubmissions.reduce((acc, submission) => {
           const task = tasks.find(t => t.id === submission.taskId)
           if (task) {
@@ -60,10 +69,8 @@ export function ProgressTracker() {
           return acc
         }, {} as { [key: string]: number })
 
-        const totalPoints = userSubmissions.reduce((sum, submission) => {
-          const task = tasks.find(t => t.id === submission.taskId)
-          return sum + (task?.points || 0)
-        }, 0)
+        // Use ecoPoints from fresh user data for accuracy
+        const totalPoints = currentUser.ecoPoints
 
         setStats({
           totalPoints,
@@ -112,7 +119,7 @@ export function ProgressTracker() {
 
   const categoryColors = {
     planting: "text-green-600",
-    waste: "text-blue-600", 
+    waste: "text-blue-600",
     energy: "text-yellow-600",
     water: "text-cyan-600"
   }
@@ -188,7 +195,7 @@ export function ProgressTracker() {
             {Object.entries(stats.tasksByCategory).map(([category, count]) => {
               const Icon = categoryIcons[category as keyof typeof categoryIcons]
               const colorClass = categoryColors[category as keyof typeof categoryColors]
-              
+
               return (
                 <div key={category} className="text-center p-4 border rounded-lg hover:shadow-md transition-shadow">
                   <Icon className={`h-8 w-8 mx-auto mb-2 ${colorClass}`} />

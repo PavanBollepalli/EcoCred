@@ -45,7 +45,9 @@ export interface Submission {
   reviewedAt?: string
   reviewedBy?: string
   comments?: string
-  mlConfidence?: number
+  mlConfidence?: number | null
+  aiDetectedObjects?: string[]
+  aiReasoning?: string
 }
 
 export interface GlobalStats {
@@ -139,3 +141,39 @@ export interface ImageUpload {
     description?: string
   }
 }
+
+// Lesson types for teacher-created lessons
+export interface QuizQuestion {
+  question: string
+  options: string[]
+  correct: number
+}
+
+export interface LessonSection {
+  title: string
+  content: string[]
+}
+
+export interface Lesson {
+  _id?: ObjectId
+  id: string
+  title: string
+  description: string
+  category: "planting" | "waste" | "energy" | "water"
+  icon: string  // Icon name as string for serialization (e.g., "TreePine", "Recycle")
+  coverImage: string
+  duration: string
+  points: number
+  content: {
+    introduction: string
+    sections: LessonSection[]
+    tips: string[]
+    quiz: QuizQuestion[]
+  }
+  createdBy: string
+  schoolId?: string  // Optional: lessons can be school-specific
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+

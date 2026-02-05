@@ -9,11 +9,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { 
-  User, 
-  Mail, 
-  Building2, 
-  Award, 
+import {
+  User,
+  Mail,
+  Building2,
+  Award,
   Calendar,
   Edit,
   Save,
@@ -22,7 +22,7 @@ import {
   Shield,
   Settings
 } from "lucide-react"
-import { getCurrentUserFromSession, getUsers, saveUser } from "@/lib/storage-api"
+import { getCurrentUserFromSession, getUsers, saveUser, getCurrentUser, setCurrentUser } from "@/lib/storage-api"
 import type { User as UserType } from "@/lib/storage-api"
 
 export default function ProfilePage() {
@@ -50,15 +50,27 @@ function ProfileView() {
 
   const loadUserData = async () => {
     try {
-      const currentUser = getCurrentUserFromSession()
-      if (currentUser) {
-        setUser(currentUser)
-        setEditForm({
-          name: currentUser.name,
-          email: currentUser.email,
-          school: currentUser.school
-        })
+      // Get user ID from session, then fetch fresh data from API
+      const sessionUser = getCurrentUserFromSession()
+      if (!sessionUser) {
+        setLoading(false)
+        return
       }
+
+      // Fetch fresh user data from database
+      const freshUser = await getCurrentUser(sessionUser.id)
+      const currentUser = freshUser || sessionUser
+
+      if (freshUser) {
+        setCurrentUser(freshUser) // Update session with fresh data
+      }
+
+      setUser(currentUser)
+      setEditForm({
+        name: currentUser.name,
+        email: currentUser.email,
+        school: currentUser.school
+      })
     } catch (error) {
       console.error('Error loading user data:', error)
     } finally {
@@ -68,7 +80,7 @@ function ProfileView() {
 
   const handleSave = async () => {
     if (!user) return
-    
+
     setSaving(true)
     try {
       const updatedUser = {
@@ -77,14 +89,14 @@ function ProfileView() {
         email: editForm.email,
         school: editForm.school
       }
-      
+
       await saveUser(updatedUser)
       setUser(updatedUser)
       setIsEditing(false)
-      
+
       // Update session
       sessionStorage.setItem('ecocred_current_user', JSON.stringify(updatedUser))
-      
+
       alert('Profile updated successfully!')
     } catch (error) {
       console.error('Error saving profile:', error)
@@ -160,7 +172,7 @@ function ProfileView() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      
+
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between items-center mb-8">
@@ -242,7 +254,7 @@ function ProfileView() {
                         <Input
                           id="name"
                           value={editForm.name}
-                          onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                           placeholder="Enter your full name"
                         />
                       ) : (
@@ -257,7 +269,7 @@ function ProfileView() {
                           id="email"
                           type="email"
                           value={editForm.email}
-                          onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                          onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                           placeholder="Enter your email"
                         />
                       ) : (
@@ -271,7 +283,7 @@ function ProfileView() {
                         <Input
                           id="school"
                           value={editForm.school}
-                          onChange={(e) => setEditForm({...editForm, school: e.target.value})}
+                          onChange={(e) => setEditForm({ ...editForm, school: e.target.value })}
                           placeholder="Enter your school name"
                         />
                       ) : (

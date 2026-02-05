@@ -38,6 +38,12 @@ function TaskSubmission() {
   const [location, setLocation] = useState("") // Added location field
   const [description, setDescription] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [aiAnalysis, setAiAnalysis] = useState<{
+    detectedObjects: string[]
+    relevanceScore: number | null
+    reasoning: string
+  } | null>(null)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
 
@@ -80,8 +86,37 @@ function TaskSubmission() {
     setError("")
 
     try {
-      // Simulate ML verification based on evidence link
-      const mlConfidence = Math.floor(Math.random() * 30) + 70 // 70-99% confidence
+      // Analyze image with AI
+      setIsAnalyzing(true)
+      let mlConfidence: number | null = null
+      let detectedObjects: string[] = []
+      let reasoning = ""
+
+      try {
+        const analysisResponse = await fetch('/api/analyze-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageUrl: evidenceImage,
+            taskCategory: task.category,
+            taskTitle: task.title
+          })
+        })
+
+        const analysisData = await analysisResponse.json()
+
+        if (analysisData.success && analysisData.analysis) {
+          mlConfidence = analysisData.analysis.relevanceScore
+          detectedObjects = analysisData.analysis.detectedObjects || []
+          reasoning = analysisData.analysis.reasoning || ""
+          setAiAnalysis(analysisData.analysis)
+        }
+      } catch (analysisError) {
+        console.error('AI analysis error:', analysisError)
+        // Continue without AI analysis - teacher can still review
+      } finally {
+        setIsAnalyzing(false)
+      }
 
       const submission: Submission = {
         id: Date.now().toString(),
@@ -93,6 +128,8 @@ function TaskSubmission() {
         status: "pending",
         submittedAt: new Date().toISOString(),
         mlConfidence,
+        aiDetectedObjects: detectedObjects,
+        aiReasoning: reasoning,
       }
 
       await saveSubmission(submission)

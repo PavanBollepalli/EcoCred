@@ -51,7 +51,9 @@ export interface Submission {
   reviewedAt?: string
   reviewedBy?: string
   comments?: string
-  mlConfidence?: number
+  mlConfidence?: number | null
+  aiDetectedObjects?: string[]
+  aiReasoning?: string
 }
 
 export interface GlobalStats {
@@ -68,6 +70,40 @@ export interface LessonProgress {
   progress: number
   completedAt?: string
   pointsEarned: number
+}
+
+// Lesson types for teacher-created lessons
+export interface QuizQuestion {
+  question: string
+  options: string[]
+  correct: number
+}
+
+export interface LessonSection {
+  title: string
+  content: string[]
+}
+
+export interface Lesson {
+  id: string
+  title: string
+  description: string
+  category: "planting" | "waste" | "energy" | "water"
+  icon: string
+  coverImage: string
+  duration: string
+  points: number
+  content: {
+    introduction: string
+    sections: LessonSection[]
+    tips: string[]
+    quiz: QuizQuestion[]
+  }
+  createdBy: string
+  schoolId?: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 // API helper functions
@@ -470,7 +506,7 @@ export const getImages = async (filters?: {
     if (filters?.taskId) params.append('taskId', filters.taskId)
     if (filters?.submissionId) params.append('submissionId', filters.submissionId)
     if (filters?.isPublic !== undefined) params.append('isPublic', filters.isPublic.toString())
-    
+
     const url = `/api/images${params.toString() ? '?' + params.toString() : ''}`
     return await apiCall(url)
   } catch (error) {
@@ -480,28 +516,84 @@ export const getImages = async (filters?: {
 }
 
 // School rankings based on student eco points
-export const getSchoolRankings = async (limit: number = 5): Promise<Array<{school: School, totalPoints: number, studentCount: number}>> => {
+export const getSchoolRankings = async (limit: number = 5): Promise<Array<{ school: School, totalPoints: number, studentCount: number }>> => {
   try {
     const users = await getUsers()
     const schools = await getSchools()
-    
+
     const schoolRankings = schools.map(school => {
       const schoolStudents = users.filter(user => user.school === school.name && user.role === 'student')
       const totalPoints = schoolStudents.reduce((sum, student) => sum + student.ecoPoints, 0)
       const studentCount = schoolStudents.length
-      
+
       return {
         school,
         totalPoints,
         studentCount
       }
     }).filter(ranking => ranking.studentCount > 0)
-     .sort((a, b) => b.totalPoints - a.totalPoints)
-     .slice(0, limit)
-    
+      .sort((a, b) => b.totalPoints - a.totalPoints)
+      .slice(0, limit)
+
     return schoolRankings
   } catch (error) {
     console.error('Error fetching school rankings:', error)
     return []
   }
 }
+
+// Lesson management
+export const getLessons = async (schoolId?: string): Promise<Lesson[]> => {
+  try {
+    const url = schoolId ? `/api/lessons/manage?schoolId=${schoolId}` : '/api/lessons/manage'
+    return await apiCall(url)
+  } catch (error) {
+    console.error('Error fetching lessons:', error)
+    return []
+  }
+}
+
+export const getLessonById = async (lessonId: string): Promise<Lesson | null> => {
+  try {
+    return await apiCall(`/api/lessons/manage?lessonId=${lessonId}`)
+  } catch (error) {
+    console.error('Error fetching lesson by ID:', error)
+    return null
+  }
+}
+
+export const saveLesson = async (lesson: Lesson): Promise<void> => {
+  try {
+    await apiCall('/api/lessons/manage', {
+      method: 'POST',
+      body: JSON.stringify(lesson),
+    })
+  } catch (error) {
+    console.error('Error saving lesson:', error)
+    throw error
+  }
+}
+
+export const updateLesson = async (lesson: Lesson): Promise<void> => {
+  try {
+    await apiCall('/api/lessons/manage', {
+      method: 'PUT',
+      body: JSON.stringify(lesson),
+    })
+  } catch (error) {
+    console.error('Error updating lesson:', error)
+    throw error
+  }
+}
+
+export const deleteLesson = async (lessonId: string): Promise<void> => {
+  try {
+    await apiCall(`/api/lessons/manage?lessonId=${lessonId}`, {
+      method: 'DELETE',
+    })
+  } catch (error) {
+    console.error('Error deleting lesson:', error)
+    throw error
+  }
+}
+

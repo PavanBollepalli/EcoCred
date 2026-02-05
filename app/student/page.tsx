@@ -32,8 +32,9 @@ import {
   getSubmissions,
   getUsers,
   getCompletedLessonsCount,
+  getLessons,
 } from "@/lib/storage-api"
-import type { User, Task, Submission } from "@/lib/storage-api"
+import type { User, Task, Submission, Lesson } from "@/lib/storage-api"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { BadgeSystem } from "@/components/gamification/badge-system"
@@ -59,26 +60,40 @@ function StudentDashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [leaderboard, setLeaderboard] = useState<User[]>([])
+  const [lessons, setLessons] = useState<Lesson[]>([])
   const [completedLessonsCount, setCompletedLessonsCount] = useState(0)
   const router = useRouter()
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const currentUser = getCurrentUserFromSession()
+        // Get user ID from session, then fetch fresh data from API
+        const sessionUser = getCurrentUserFromSession()
+        if (!sessionUser) return
+
+        // Fetch fresh user data from database
+        const freshUser = await getCurrentUser(sessionUser.id)
+        if (freshUser) {
+          setCurrentUser(freshUser) // Update session with fresh data
+          setUser(freshUser)
+        } else {
+          setUser(sessionUser) // Fallback to session data
+        }
+
         const allTasks = await getTasks()
         const allSubmissions = await getSubmissions()
         const students = await getUsers()
+        const allLessons = await getLessons()
         const studentUsers = students.filter((u) => u.role === "student")
         const sortedStudents = studentUsers.sort((a, b) => b.ecoPoints - a.ecoPoints)
 
-        setUser(currentUser)
         setTasks(allTasks)
         setSubmissions(allSubmissions)
         setLeaderboard(sortedStudents)
+        setLessons(allLessons)
 
-        if (currentUser) {
-          const count = await getCompletedLessonsCount(currentUser.id)
+        if (sessionUser) {
+          const count = await getCompletedLessonsCount(sessionUser.id)
           setCompletedLessonsCount(count)
         }
       } catch (error) {
@@ -120,48 +135,21 @@ function StudentDashboard() {
       {} as { [key: string]: number },
     )
 
-  const lessons = [
-    {
-      id: "tree-planting",
-      title: "Tree Planting Basics",
-      category: "planting",
-      icon: TreePine,
-      coverImage: "/students-planting-trees-in-school-garden-with-shov.jpg",
-      duration: "8 min read",
-      points: 15,
-      description: "Learn proper tree planting techniques and environmental impact",
-    },
-    {
-      id: "waste-management",
-      title: "Waste Management & Recycling",
-      category: "waste",
-      icon: Recycle,
-      coverImage: "/colorful-recycling-bins-with-waste-segregation-sym.jpg",
-      duration: "10 min read",
-      points: 20,
-      description: "Master the 5 R's and proper waste segregation techniques",
-    },
-    {
-      id: "energy-conservation",
-      title: "Energy Conservation & Efficiency",
-      category: "energy",
-      icon: Zap,
-      coverImage: "/led-light-bulbs-and-solar-panels-with-energy-savin.jpg",
-      duration: "9 min read",
-      points: 18,
-      description: "Reduce energy consumption and save money with smart techniques",
-    },
-    {
-      id: "water-conservation",
-      title: "Water Conservation & Management",
-      category: "water",
-      icon: Droplets,
-      coverImage: "/rainwater-harvesting-system-and-water-conservation.jpg",
-      duration: "7 min read",
-      points: 16,
-      description: "Implement water-saving strategies and rainwater harvesting",
-    },
-  ]
+  // Icon mapping for dynamic lessons
+  const getIconComponent = (iconName: string) => {
+    switch (iconName) {
+      case "TreePine":
+        return TreePine
+      case "Recycle":
+        return Recycle
+      case "Zap":
+        return Zap
+      case "Droplets":
+        return Droplets
+      default:
+        return BookOpen
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -355,54 +343,66 @@ function StudentDashboard() {
 
           {/* Lessons Tab */}
           <TabsContent value="lessons" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {lessons.map((lesson) => {
-                const IconComponent = lesson.icon
-                const isCompleted = user.completedLessons?.includes(lesson.id)
+            {lessons.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {lessons.map((lesson) => {
+                  const IconComponent = getIconComponent(lesson.icon)
+                  const isCompleted = user.completedLessons?.includes(lesson.id)
 
-                return (
-                  <Card
-                    key={lesson.id}
-                    className="hover:shadow-lg transition-shadow cursor-pointer relative"
-                    onClick={() => router.push(`/student/lesson/${lesson.id}`)}
-                  >
-                    {isCompleted && (
-                      <div className="absolute top-4 right-4 z-10">
-                        <Badge className="bg-green-500">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Completed
-                        </Badge>
-                      </div>
-                    )}
-                    <div className="relative h-48 overflow-hidden rounded-t-lg">
-                      <img
-                        src={lesson.coverImage || "/placeholder.svg"}
-                        alt={lesson.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                        <div className="text-center text-white">
-                          <IconComponent className="h-8 w-8 mx-auto mb-2" />
-                          <h3 className="text-lg font-bold">{lesson.title}</h3>
-                        </div>
-                      </div>
-                    </div>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <Badge variant="outline">{lesson.duration}</Badge>
-                        <Badge variant="secondary">{lesson.points} points</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{lesson.description}</p>
+                  return (
+                    <Card
+                      key={lesson.id}
+                      className="hover:shadow-lg transition-shadow cursor-pointer relative"
+                      onClick={() => router.push(`/student/lesson/${lesson.id}`)}
+                    >
                       {isCompleted && (
-                        <div className="mt-2 flex items-center text-green-600 text-sm">
-                          <CheckCircle className="h-4 w-4 mr-1" />+{lesson.points} points earned
+                        <div className="absolute top-4 right-4 z-10">
+                          <Badge className="bg-green-500">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Completed
+                          </Badge>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
+                      <div className="relative h-48 overflow-hidden rounded-t-lg">
+                        <img
+                          src={lesson.coverImage || "/placeholder.svg"}
+                          alt={lesson.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                          <div className="text-center text-white">
+                            <IconComponent className="h-8 w-8 mx-auto mb-2" />
+                            <h3 className="text-lg font-bold">{lesson.title}</h3>
+                          </div>
+                        </div>
+                      </div>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant="outline">{lesson.duration}</Badge>
+                          <Badge variant="secondary">{lesson.points} points</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{lesson.description}</p>
+                        {isCompleted && (
+                          <div className="mt-2 flex items-center text-green-600 text-sm">
+                            <CheckCircle className="h-4 w-4 mr-1" />+{lesson.points} points earned
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Lessons Available</h3>
+                  <p className="text-muted-foreground">
+                    Check back later for new lessons from your teachers.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Tasks Tab */}
@@ -507,7 +507,7 @@ function StudentDashboard() {
           </TabsContent>
         </Tabs>
       </div>
-      
+
       {/* Footer */}
       <Footer />
     </div>

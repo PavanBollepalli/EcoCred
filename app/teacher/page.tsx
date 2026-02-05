@@ -39,8 +39,10 @@ import {
   updateGlobalStats,
   getGlobalStats,
   getCompletedLessonsCount,
+  getLessons,
+  deleteLesson,
 } from "@/lib/storage-api"
-import type { User, Task, Submission } from "@/lib/storage-api"
+import type { User, Task, Submission, Lesson } from "@/lib/storage-api"
 import { Calendar } from "@/components/calendar"
 import { SeasonalEvents } from "@/components/seasonal-events"
 import { Announcements } from "@/components/announcements"
@@ -60,10 +62,12 @@ function TeacherDashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [students, setStudents] = useState<User[]>([])
+  const [lessons, setLessons] = useState<Lesson[]>([])
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null)
   const [selectedStudent, setSelectedStudent] = useState<User | null>(null)
   const [reviewComment, setReviewComment] = useState("")
   const [isReviewing, setIsReviewing] = useState(false)
+  const [isDeletingLesson, setIsDeletingLesson] = useState<string | null>(null)
   const router = useRouter()
 
   const loadData = async () => {
@@ -73,11 +77,13 @@ function TeacherDashboard() {
       const allSubmissions = await getSubmissions()
       const allUsers = await getUsers()
       const studentUsers = allUsers.filter((u) => u.role === "student")
+      const allLessons = await getLessons()
 
       setUser(currentUser)
       setTasks(allTasks)
       setSubmissions(allSubmissions)
       setStudents(studentUsers)
+      setLessons(allLessons)
     } catch (error) {
       console.error('Error loading teacher data:', error)
     }
@@ -207,6 +213,7 @@ function TeacherDashboard() {
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
+            <TabsTrigger value="lessons">Lessons</TabsTrigger>
             <TabsTrigger value="events">Events</TabsTrigger>
             <TabsTrigger value="announcements">Announcements</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
@@ -336,15 +343,14 @@ function TeacherDashboard() {
                         <div key={student.id} className="flex items-center space-x-4 p-3 rounded-lg bg-muted/50">
                           <div className="flex-shrink-0">
                             <div
-                              className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
-                                index === 0
-                                  ? "bg-yellow-500"
-                                  : index === 1
-                                    ? "bg-gray-400"
-                                    : index === 2
-                                      ? "bg-amber-600"
-                                      : "bg-primary"
-                              }`}
+                              className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${index === 0
+                                ? "bg-yellow-500"
+                                : index === 1
+                                  ? "bg-gray-400"
+                                  : index === 2
+                                    ? "bg-amber-600"
+                                    : "bg-primary"
+                                }`}
                             >
                               {index + 1}
                             </div>
@@ -414,11 +420,10 @@ function TeacherDashboard() {
                           return (
                             <div
                               key={student.id}
-                              className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                                selectedStudent?.id === student.id
-                                  ? "bg-primary/10 border-primary"
-                                  : "hover:bg-muted/50"
-                              }`}
+                              className={`p-4 border rounded-lg cursor-pointer transition-colors ${selectedStudent?.id === student.id
+                                ? "bg-primary/10 border-primary"
+                                : "hover:bg-muted/50"
+                                }`}
                               onClick={() => setSelectedStudent(student)}
                             >
                               <div className="flex items-center justify-between mb-2">
@@ -698,25 +703,68 @@ function TeacherDashboard() {
                                   <strong>Location:</strong> {selectedSubmission.location}
                                 </p>
                               )}
-                              {selectedSubmission.mlConfidence && (
-                                <p className="text-sm">
-                                  <strong>AI Verification:</strong> {selectedSubmission.mlConfidence}% confidence
-                                </p>
-                              )}
                             </div>
 
-                            {selectedSubmission.evidence && selectedSubmission.evidence.startsWith('http') && (
-                              <div>
-                                <label className="text-sm font-medium">Evidence Image</label>
-                                <div className="mt-2">
-                                  <img
-                                    src={selectedSubmission.evidence}
-                                    alt="Task evidence"
-                                    className="w-full h-48 object-cover rounded-lg border"
-                                  />
+                            {/* AI Analysis Section */}
+                            {(selectedSubmission.mlConfidence !== null && selectedSubmission.mlConfidence !== undefined) && (
+                              <div className="p-3 border rounded-lg bg-gradient-to-r from-purple-50 to-blue-50">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center">
+                                    <span className="text-white text-sm">🤖</span>
+                                  </div>
+                                  <div>
+                                    <p className="font-semibold text-sm">AI Verification</p>
+                                    <p className={`text-lg font-bold ${selectedSubmission.mlConfidence >= 80 ? 'text-green-600' :
+                                        selectedSubmission.mlConfidence >= 50 ? 'text-yellow-600' : 'text-red-600'
+                                      }`}>
+                                      {selectedSubmission.mlConfidence}% Confidence
+                                    </p>
+                                  </div>
                                 </div>
+
+                                {selectedSubmission.aiDetectedObjects && selectedSubmission.aiDetectedObjects.length > 0 && (
+                                  <div className="mt-2">
+                                    <p className="text-xs font-medium text-muted-foreground mb-1">Detected:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {selectedSubmission.aiDetectedObjects.map((obj, idx) => (
+                                        <span key={idx} className="px-2 py-0.5 bg-white rounded-full text-xs border">
+                                          {obj}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {selectedSubmission.aiReasoning && (
+                                  <div className="mt-2 p-2 bg-white/50 rounded text-xs text-muted-foreground">
+                                    <strong>AI Assessment:</strong> {selectedSubmission.aiReasoning}
+                                  </div>
+                                )}
                               </div>
                             )}
+
+                            {/* Always show evidence image if it exists and is a valid image path */}
+                            {selectedSubmission.evidence && (
+                              selectedSubmission.evidence.startsWith('http') ||
+                              selectedSubmission.evidence.startsWith('/uploads') ||
+                              selectedSubmission.evidence.startsWith('/') ||
+                              selectedSubmission.evidence.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+                            ) && (
+                                <div>
+                                  <label className="text-sm font-medium">Evidence Image</label>
+                                  <div className="mt-2">
+                                    <img
+                                      src={selectedSubmission.evidence}
+                                      alt="Task evidence"
+                                      className="w-full max-h-64 object-contain rounded-lg border bg-muted"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement
+                                        target.style.display = 'none'
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
 
                             {selectedSubmission.description && (
                               <div>
@@ -728,11 +776,10 @@ function TeacherDashboard() {
                             )}
 
                             <div>
-                              <label className="text-sm font-medium">Evidence</label>
+                              <label className="text-sm font-medium">Evidence Link</label>
                               <div className="mt-1 p-4 border rounded-lg bg-muted/50">
-                                {selectedSubmission.evidence.startsWith("http") ? (
+                                {selectedSubmission.evidence ? (
                                   <div>
-                                    <p className="text-sm font-medium mb-2">Image Evidence:</p>
                                     <a
                                       href={selectedSubmission.evidence}
                                       target="_blank"
@@ -742,16 +789,11 @@ function TeacherDashboard() {
                                       {selectedSubmission.evidence}
                                     </a>
                                     <p className="text-xs text-muted-foreground mt-2">
-                                      Click the link above to view the student&apos;s evidence image
+                                      Click the link above to open the evidence in a new tab
                                     </p>
                                   </div>
                                 ) : (
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">File: {selectedSubmission.evidence}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      (In a real app, this would show the uploaded image/video)
-                                    </p>
-                                  </div>
+                                  <p className="text-sm text-muted-foreground">No evidence provided</p>
                                 )}
                               </div>
                             </div>
@@ -958,6 +1000,124 @@ function TeacherDashboard() {
             </div>
           </TabsContent>
 
+          {/* Lessons Tab */}
+          <TabsContent value="lessons" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Manage Lessons</h2>
+              <Button asChild>
+                <Link href="/teacher/create-lesson">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create New Lesson
+                </Link>
+              </Button>
+            </div>
+
+            {lessons.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {lessons.map((lesson) => {
+                  // Get student completion stats for this lesson
+                  const studentsCompleted = students.filter((s) =>
+                    s.completedLessons?.includes(lesson.id)
+                  ).length
+
+                  return (
+                    <Card key={lesson.id} className="relative overflow-hidden">
+                      {lesson.coverImage && (
+                        <div className="h-32 overflow-hidden">
+                          <img
+                            src={lesson.coverImage}
+                            alt={lesson.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            {lesson.category === "planting" && <TreePine className="h-5 w-5 text-primary" />}
+                            {lesson.category === "waste" && <Recycle className="h-5 w-5 text-secondary" />}
+                            {lesson.category === "energy" && <Zap className="h-5 w-5 text-yellow-500" />}
+                            {lesson.category === "water" && <Droplets className="h-5 w-5 text-blue-500" />}
+                            <CardTitle className="text-lg">{lesson.title}</CardTitle>
+                          </div>
+                          <Badge variant="outline">{lesson.points} pts</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                          {lesson.description}
+                        </p>
+                        <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
+                          <span className="flex items-center space-x-1">
+                            <BookOpen className="h-4 w-4" />
+                            <span>{lesson.duration}</span>
+                          </span>
+                          <span className="flex items-center space-x-1">
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <span>{studentsCompleted} students completed</span>
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
+                          <span>{lesson.content.sections.length} sections</span>
+                          <span>{lesson.content.quiz.length} quiz questions</span>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => router.push(`/teacher/create-lesson?edit=${lesson.id}`)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="flex-1"
+                            disabled={isDeletingLesson === lesson.id}
+                            onClick={async () => {
+                              if (confirm('Are you sure you want to delete this lesson?')) {
+                                setIsDeletingLesson(lesson.id)
+                                try {
+                                  await deleteLesson(lesson.id)
+                                  await loadData()
+                                } catch (error) {
+                                  console.error('Error deleting lesson:', error)
+                                } finally {
+                                  setIsDeletingLesson(null)
+                                }
+                              }
+                            }}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            {isDeletingLesson === lesson.id ? "Deleting..." : "Delete"}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Lessons Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Create your first lesson to help students learn about environmental topics.
+                  </p>
+                  <Button asChild>
+                    <Link href="/teacher/create-lesson">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Your First Lesson
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
           {/* Events Tab */}
           <TabsContent value="events" className="space-y-6">
             <SeasonalEvents userRole={user?.role} />
@@ -974,7 +1134,7 @@ function TeacherDashboard() {
           </TabsContent>
         </Tabs>
       </div>
-      
+
       {/* Footer */}
       <Footer />
     </div>

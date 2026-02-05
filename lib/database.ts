@@ -2,7 +2,7 @@ import { getDatabase } from './mongodb'
 
 // Re-export getDatabase for API routes
 export { getDatabase }
-import type { User, Task, Submission, GlobalStats, LessonProgress, School, CalendarEvent, SeasonalEvent, Announcement, ImageUpload } from './types'
+import type { User, Task, Submission, GlobalStats, LessonProgress, School, CalendarEvent, SeasonalEvent, Announcement, ImageUpload, Lesson } from './types'
 
 // User management
 export async function getUsers(): Promise<User[]> {
@@ -168,11 +168,11 @@ export async function getGlobalStats(): Promise<GlobalStats> {
   try {
     const db = await getDatabase()
     const stats = await db.collection<GlobalStats>('globalStats').findOne({})
-    
+
     if (stats) {
       return { ...stats, _id: undefined }
     }
-    
+
     // Return default stats if none exist
     return {
       totalSaplings: 0,
@@ -219,7 +219,7 @@ export async function completeLesson(userId: string, lessonId: string, points: n
   try {
     const db = await getDatabase()
     const user = await db.collection<User>('users').findOne({ id: userId })
-    
+
     if (!user) {
       throw new Error('User not found')
     }
@@ -299,14 +299,14 @@ export async function assignBadges(userId: string): Promise<string[]> {
   try {
     const db = await getDatabase()
     const user = await db.collection<User>('users').findOne({ id: userId })
-    
+
     if (!user) return []
 
     const submissions = await db.collection<Submission>('submissions')
       .find({ studentId: userId, status: "approved" }).toArray()
-    
+
     const tasks = await db.collection<Task>('tasks').find({}).toArray()
-    
+
     // Calculate completed tasks by category
     const completedTasksByCategory = submissions.reduce((acc, submission) => {
       const task = tasks.find(t => t.id === submission.taskId)
@@ -384,7 +384,7 @@ export async function assignBadges(userId: string): Promise<string[]> {
 export async function initializeDemoData(): Promise<void> {
   try {
     const db = await getDatabase()
-    
+
     // Initialize global stats if not exists
     const existingStats = await db.collection<GlobalStats>('globalStats').findOne({})
     if (!existingStats) {
@@ -397,8 +397,8 @@ export async function initializeDemoData(): Promise<void> {
       })
     }
 
-  
-    
+
+
   } catch (error) {
     console.error('Error initializing demo data:', error)
     throw error
@@ -438,11 +438,11 @@ export async function updateSchool(id: string, schoolData: Partial<School>): Pro
     const db = await getDatabase()
     await db.collection<School>('schools').updateOne(
       { id },
-      { 
-        $set: { 
-          ...schoolData, 
-          updatedAt: new Date().toISOString() 
-        } 
+      {
+        $set: {
+          ...schoolData,
+          updatedAt: new Date().toISOString()
+        }
       }
     )
   } catch (error) {
@@ -607,12 +607,12 @@ export async function getImageUploads(filters?: {
   try {
     const db = await getDatabase()
     const query: any = {}
-    
+
     if (filters?.uploadedBy) query.uploadedBy = filters.uploadedBy
     if (filters?.taskId) query.taskId = filters.taskId
     if (filters?.submissionId) query.submissionId = filters.submissionId
     if (filters?.isPublic !== undefined) query.isPublic = filters.isPublic
-    
+
     return await db.collection<ImageUpload>('imageUploads').find(query).sort({ uploadedAt: -1 }).toArray()
   } catch (error) {
     console.error('Error fetching image uploads:', error)
@@ -641,29 +641,92 @@ export async function deleteImageUpload(id: string): Promise<void> {
 }
 
 // School rankings based on student eco points
-export async function getSchoolRankings(limit: number = 5): Promise<Array<{school: School, totalPoints: number, studentCount: number}>> {
+export async function getSchoolRankings(limit: number = 5): Promise<Array<{ school: School, totalPoints: number, studentCount: number }>> {
   try {
     const db = await getDatabase()
     const users = await db.collection<User>('users').find({ role: 'student' }).toArray()
     const schools = await db.collection<School>('schools').find({}).toArray()
-    
+
     const schoolRankings = schools.map(school => {
       const schoolStudents = users.filter(user => user.school === school.name)
       const totalPoints = schoolStudents.reduce((sum, student) => sum + student.ecoPoints, 0)
       const studentCount = schoolStudents.length
-      
+
       return {
         school,
         totalPoints,
         studentCount
       }
     }).filter(ranking => ranking.studentCount > 0)
-     .sort((a, b) => b.totalPoints - a.totalPoints)
-     .slice(0, limit)
-    
+      .sort((a, b) => b.totalPoints - a.totalPoints)
+      .slice(0, limit)
+
     return schoolRankings
   } catch (error) {
     console.error('Error fetching school rankings:', error)
+    return []
+  }
+}
+
+// Lesson management
+export async function getLessons(schoolId?: string): Promise<Lesson[]> {
+  try {
+    const db = await getDatabase()
+    const filter: any = { isActive: true }
+    if (schoolId) filter.schoolId = schoolId
+    const lessons = await db.collection<Lesson>('lessons').find(filter).sort({ createdAt: -1 }).toArray()
+    return lessons.map(lesson => ({ ...lesson, _id: undefined }))
+  } catch (error) {
+    console.error('Error fetching lessons:', error)
+    return []
+  }
+}
+
+export async function getLessonById(lessonId: string): Promise<Lesson | null> {
+  try {
+    const db = await getDatabase()
+    const lesson = await db.collection<Lesson>('lessons').findOne({ id: lessonId })
+    return lesson ? { ...lesson, _id: undefined } : null
+  } catch (error) {
+    console.error('Error fetching lesson by ID:', error)
+    return null
+  }
+}
+
+export async function saveLesson(lesson: Lesson): Promise<void> {
+  try {
+    const db = await getDatabase()
+    await db.collection<Lesson>('lessons').replaceOne(
+      { id: lesson.id },
+      lesson,
+      { upsert: true }
+    )
+  } catch (error) {
+    console.error('Error saving lesson:', error)
+    throw error
+  }
+}
+
+export async function deleteLesson(id: string): Promise<void> {
+  try {
+    const db = await getDatabase()
+    const result = await db.collection<Lesson>('lessons').deleteOne({ id })
+    if (result.deletedCount === 0) {
+      throw new Error('Lesson not found')
+    }
+  } catch (error) {
+    console.error('Error deleting lesson:', error)
+    throw error
+  }
+}
+
+export async function getLessonsByTeacher(teacherId: string): Promise<Lesson[]> {
+  try {
+    const db = await getDatabase()
+    const lessons = await db.collection<Lesson>('lessons').find({ createdBy: teacherId }).sort({ createdAt: -1 }).toArray()
+    return lessons.map(lesson => ({ ...lesson, _id: undefined }))
+  } catch (error) {
+    console.error('Error fetching lessons by teacher:', error)
     return []
   }
 }
