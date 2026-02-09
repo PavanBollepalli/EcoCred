@@ -214,7 +214,7 @@ function TeacherDashboard() {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="w-full grid grid-cols-5 lg:grid-cols-10">
+          <TabsList className="w-full grid grid-cols-5 lg:grid-cols-11">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="students">Your Students</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
