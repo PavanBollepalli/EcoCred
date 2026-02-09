@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
-import { Menu, Leaf, User, GraduationCap, BarChart3, Home, BookOpen, Users, Settings, Image, LogOut } from "lucide-react"
+import { Menu, Leaf, User, GraduationCap, BarChart3, Home, BookOpen, Users, Settings, Image, LogOut, Info } from "lucide-react"
 import { getCurrentUserFromSession } from "@/lib/storage-api"
 
 export function Navigation() {
@@ -23,6 +23,7 @@ export function Navigation() {
     ...(currentUser?.role === 'student' ? [{ href: "/student", label: "Student Portal", icon: GraduationCap }] : []),
     ...(currentUser?.role === 'teacher' ? [{ href: "/teacher", label: "Teacher Portal", icon: User }] : []),
     ...(currentUser?.role === 'admin' ? [{ href: "/admin", label: "Admin Portal", icon: Settings }] : []),
+    { href: "/about", label: "About", icon: Info },
     { href: "/gallery", label: "Gallery", icon: Image },
   ]
 
@@ -32,6 +33,7 @@ export function Navigation() {
     ...(currentUser?.role === 'student' ? [{ href: "/student", label: "Student Portal", icon: GraduationCap, description: "Tasks, Lessons & Progress" }] : []),
     ...(currentUser?.role === 'teacher' ? [{ href: "/teacher", label: "Teacher Portal", icon: User, description: "Manage Students & Tasks" }] : []),
     ...(currentUser?.role === 'admin' ? [{ href: "/admin", label: "Admin Portal", icon: Settings, description: "Manage schools & system" }] : []),
+    { href: "/about", label: "About", icon: Info, description: "Learn about EcoCred" },
     { href: "/gallery", label: "Gallery", icon: Image, description: "View all task images" },
     // Only show login/signup if not logged in
     ...(!currentUser ? [
@@ -75,7 +77,7 @@ export function Navigation() {
               </Link>
             )
           })}
-          
+
           {/* User Status Badge */}
           {currentUser && (
             <div className="ml-4 flex items-center space-x-3">
@@ -150,7 +152,7 @@ export function Navigation() {
                     const Icon = item.icon
                     const isSpecial = item.href === '/login' || item.href === '/signup'
                     const isLogout = item.href === '#logout'
-                    
+
                     if (isLogout) {
                       return (
                         <button
@@ -171,38 +173,33 @@ export function Navigation() {
                         </button>
                       )
                     }
-                    
+
                     return (
                       <Link
                         key={item.href}
                         href={item.href}
-                        className={`flex items-center space-x-4 p-4 rounded-xl transition-all duration-200 group ${
-                          isSpecial 
-                            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 shadow-lg' 
+                        className={`flex items-center space-x-4 p-4 rounded-xl transition-all duration-200 group ${isSpecial
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 shadow-lg'
                             : 'hover:bg-primary/5 hover:shadow-md border border-transparent hover:border-primary/20'
-                        }`}
+                          }`}
                         onClick={() => setIsOpen(false)}
                       >
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                          isSpecial 
-                            ? 'bg-white/20' 
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isSpecial
+                            ? 'bg-white/20'
                             : 'bg-primary/10 group-hover:bg-primary/20'
-                        }`}>
-                          <Icon className={`h-5 w-5 ${
-                            isSpecial 
-                              ? 'text-white' 
+                          }`}>
+                          <Icon className={`h-5 w-5 ${isSpecial
+                              ? 'text-white'
                               : 'text-primary group-hover:text-primary'
-                          }`} />
+                            }`} />
                         </div>
                         <div className="flex-1">
-                          <p className={`font-semibold ${
-                            isSpecial ? 'text-white' : 'text-foreground'
-                          }`}>
+                          <p className={`font-semibold ${isSpecial ? 'text-white' : 'text-foreground'
+                            }`}>
                             {item.label}
                           </p>
-                          <p className={`text-sm ${
-                            isSpecial ? 'text-blue-100' : 'text-muted-foreground'
-                          }`}>
+                          <p className={`text-sm ${isSpecial ? 'text-blue-100' : 'text-muted-foreground'
+                            }`}>
                             {item.description}
                           </p>
                         </div>

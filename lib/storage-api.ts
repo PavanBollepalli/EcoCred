@@ -650,3 +650,130 @@ export const deleteBadge = async (badgeId: string): Promise<void> => {
     throw error
   }
 }
+
+// ===== POINTS LEDGER API =====
+
+export const getPointsLedger = async (userId: string) => {
+  try {
+    return await apiCall(`/api/points?userId=${userId}&action=ledger`)
+  } catch (error) {
+    console.error('Error fetching points ledger:', error)
+    return []
+  }
+}
+
+export const getPointsSummary = async (userId: string) => {
+  try {
+    return await apiCall(`/api/points?userId=${userId}&action=summary`)
+  } catch (error) {
+    console.error('Error fetching points summary:', error)
+    return {}
+  }
+}
+
+export const claimDailyReward = async (userId: string) => {
+  try {
+    return await apiCall('/api/daily-login', {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    })
+  } catch (error) {
+    console.error('Error claiming daily reward:', error)
+    throw error
+  }
+}
+
+// ===== ASSESSMENT API =====
+
+export const getAssessments = async (schoolId?: string) => {
+  try {
+    const url = schoolId ? `/api/assessments?schoolId=${schoolId}` : '/api/assessments'
+    return await apiCall(url)
+  } catch (error) {
+    console.error('Error fetching assessments:', error)
+    return []
+  }
+}
+
+export const getAssessmentById = async (id: string) => {
+  try {
+    return await apiCall(`/api/assessments?id=${id}`)
+  } catch (error) {
+    console.error('Error fetching assessment:', error)
+    return null
+  }
+}
+
+export const generateAssessment = async (data: {
+  topic: string
+  syllabus: string
+  questionCount?: number
+  category?: string
+}) => {
+  try {
+    return await apiCall('/api/assessments/generate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  } catch (error) {
+    console.error('Error generating assessment:', error)
+    throw error
+  }
+}
+
+export const saveAssessment = async (assessment: any) => {
+  try {
+    return await apiCall('/api/assessments', {
+      method: 'POST',
+      body: JSON.stringify(assessment),
+    })
+  } catch (error) {
+    console.error('Error saving assessment:', error)
+    throw error
+  }
+}
+
+export const submitAssessmentAttempt = async (data: {
+  userId: string
+  assessmentId: string
+  answers: Record<string, string>
+}) => {
+  try {
+    return await apiCall('/api/assessments/attempt', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  } catch (error) {
+    console.error('Error submitting assessment:', error)
+    throw error
+  }
+}
+
+// ===== GAMES API =====
+
+export const getGames = async (userId?: string) => {
+  try {
+    const url = userId ? `/api/games/complete?userId=${userId}` : '/api/games/complete'
+    return await apiCall(url)
+  } catch (error) {
+    console.error('Error fetching games:', error)
+    return []
+  }
+}
+
+export const completeGame = async (data: {
+  userId: string
+  gameId: string
+  score?: number
+}) => {
+  try {
+    return await apiCall('/api/games/complete', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  } catch (error) {
+    console.error('Error completing game:', error)
+    throw error
+  }
+}
+

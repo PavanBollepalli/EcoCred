@@ -19,6 +19,8 @@ export interface User {
   level?: number
   createdAt?: string
   lastActive?: string
+  lastLogin?: string // ISO timestamp of last login
+  lastDailyReward?: string // YYYY-MM-DD format for daily reward tracking
 }
 
 export interface Task {
@@ -207,4 +209,89 @@ export interface EarnedBadge {
   badgeId: string
   badge: Badge
   earnedAt: string
+}
+
+// Points Ledger for tracking all point transactions
+export interface PointsLedgerEntry {
+  _id?: ObjectId
+  id: string
+  userId: string
+  points: number
+  source: 'daily_login' | 'game' | 'assessment' | 'task' | 'lesson'
+  sourceId?: string // ID of the task, game, assessment, or lesson
+  timestamp: string
+  metadata?: Record<string, any>
+}
+
+// AI Assessment System
+export interface AssessmentQuestion {
+  id: string
+  question: string
+  type: 'mcq' | 'short_answer'
+  options?: string[] // For MCQ questions
+  correctAnswer: string | number // Index for MCQ, text for short answer
+  explanation: string
+  points: number
+}
+
+export interface Assessment {
+  _id?: ObjectId
+  id: string
+  title: string
+  topic: string
+  description: string
+  category: "planting" | "waste" | "energy" | "water"
+  questions: AssessmentQuestion[]
+  totalPoints: number
+  badgeName: string // Badge awarded on completion
+  createdBy: string
+  schoolId?: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AssessmentAttempt {
+  _id?: ObjectId
+  id: string
+  userId: string
+  assessmentId: string
+  answers: Record<string, string> // questionId -> answer
+  score: number
+  maxScore: number
+  completedAt: string
+  pointsEarned: number
+  badgeAwarded?: boolean
+}
+
+// Educational Games System
+export interface Game {
+  id: string
+  name: string
+  description: string
+  category: 'energy' | 'waste' | 'water' | 'pollution'
+  points: number
+  badgeName: string
+  difficulty: 'easy' | 'medium' | 'hard'
+  estimatedTime: string
+}
+
+export interface GameCompletion {
+  _id?: ObjectId
+  id: string
+  userId: string
+  gameId: string
+  score: number
+  completedAt: string
+  pointsEarned: number
+}
+
+// Event Logging
+export interface EventLog {
+  _id?: ObjectId
+  id: string
+  userId: string
+  eventType: 'daily_login' | 'game_completed' | 'assessment_completed' | 'task_approved' | 'lesson_completed'
+  eventData: Record<string, any>
+  timestamp: string
 }

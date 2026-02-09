@@ -23,6 +23,9 @@ import {
   Droplets,
   LogOut,
   CheckCircle,
+  Gamepad2,
+  Brain,
+  Gift,
 } from "lucide-react"
 import {
   getCurrentUser,
@@ -34,6 +37,7 @@ import {
   getCompletedLessonsCount,
   getLessons,
   saveUser,
+  claimDailyReward,
 } from "@/lib/storage-api"
 import type { User, Task, Submission, Lesson, Badge as BadgeType } from "@/lib/storage-api"
 import { useRouter } from "next/navigation"
@@ -66,6 +70,7 @@ function StudentDashboard() {
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [completedLessonsCount, setCompletedLessonsCount] = useState(0)
   const [showAchievement, setShowAchievement] = useState(false)
+  const [dailyRewardClaimed, setDailyRewardClaimed] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -99,6 +104,22 @@ function StudentDashboard() {
         if (sessionUser) {
           const count = await getCompletedLessonsCount(sessionUser.id)
           setCompletedLessonsCount(count)
+
+          // Check and claim daily reward
+          try {
+            const rewardResult = await claimDailyReward(sessionUser.id)
+            if (rewardResult.awarded) {
+              setDailyRewardClaimed(true)
+              // Refresh user data to show new points
+              const updatedUser = await getCurrentUser(sessionUser.id)
+              if (updatedUser) {
+                setCurrentUser(updatedUser)
+                setUser(updatedUser)
+              }
+            }
+          } catch (error) {
+            // Daily reward already claimed or error - silently continue
+          }
         }
       } catch (error) {
         console.error('Error loading student data:', error)
@@ -237,12 +258,14 @@ function StudentDashboard() {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="w-full">
+          <TabsList className="w-full grid grid-cols-5 lg:grid-cols-11">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="progress">Progress</TabsTrigger>
             <TabsTrigger value="lessons">Lessons</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
+            <TabsTrigger value="games">Games</TabsTrigger>
+            <TabsTrigger value="assessments">Assessments</TabsTrigger>
             <TabsTrigger value="badges">Badges</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="events">Events</TabsTrigger>
@@ -545,6 +568,52 @@ function StudentDashboard() {
           {/* Announcements Tab */}
           <TabsContent value="announcements" className="space-y-6">
             <Announcements schoolId={user.school} targetAudience="students" showAddButton={false} userRole={user.role} />
+          </TabsContent>
+
+          {/* Games Tab */}
+          <TabsContent value="games" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Gamepad2 className="h-6 w-6 text-green-600" />
+                  Educational Games
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  Learn about environmental conservation through fun, interactive games!
+                </p>
+                <Link href="/student/games">
+                  <Button className="w-full bg-green-600 hover:bg-green-700">
+                    <Gamepad2 className="h-4 w-4 mr-2" />
+                    Play Games
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Assessments Tab */}
+          <TabsContent value="assessments" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="h-6 w-6 text-blue-600" />
+                  AI Assessments
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  Test your knowledge with AI-generated assessments and earn points and badges!
+                </p>
+                <Link href="/student/assessments">
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Brain className="h-4 w-4 mr-2" />
+                    View Assessments
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

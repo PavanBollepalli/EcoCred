@@ -2,7 +2,8 @@ import { getDatabase } from './mongodb'
 
 // Re-export getDatabase for API routes
 export { getDatabase }
-import type { User, Task, Submission, GlobalStats, LessonProgress, School, CalendarEvent, SeasonalEvent, Announcement, ImageUpload, Lesson, Badge } from './types'
+import type { User, Task, Submission, GlobalStats, LessonProgress, School, CalendarEvent, SeasonalEvent, Announcement, ImageUpload, Lesson, Badge, PointsLedgerEntry, Assessment, AssessmentAttempt, GameCompletion, EventLog } from './types'
+
 
 // User management
 export async function getUsers(): Promise<User[]> {
@@ -19,9 +20,11 @@ export async function getUsers(): Promise<User[]> {
 export async function saveUser(user: User): Promise<void> {
   try {
     const db = await getDatabase()
+    // Remove _id field to prevent MongoDB immutable field error
+    const { _id, ...userWithoutId } = user as any
     await db.collection<User>('users').replaceOne(
       { id: user.id },
-      user,
+      userWithoutId,
       { upsert: true }
     )
   } catch (error) {
@@ -798,6 +801,7 @@ export async function getBadgesByTeacher(teacherId: string): Promise<Badge[]> {
   }
 }
 
+
 // Get all badges including inactive for admin purposes
 export async function getAllBadges(): Promise<Badge[]> {
   try {
@@ -806,6 +810,224 @@ export async function getAllBadges(): Promise<Badge[]> {
     return badges.map(badge => ({ ...badge, _id: undefined }))
   } catch (error) {
     console.error('Error fetching all badges:', error)
+    return []
+  }
+}
+
+// ===== POINTS LEDGER SYSTEM =====
+
+export async function addPointsLedgerEntry(entry: Omit<PointsLedgerEntry, 'id'>): Promise<void> {
+  try {
+    const db = await getDatabase()
+    const newEntry: PointsLedgerEntry = {
+      ...entry,
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+    }
+    await db.collection<PointsLedgerEntry>('points_ledger').insertOne(newEntry as any)
+  } catch (error) {
+    console.error('Error adding points ledger entry:', error)
+    throw error
+  }
+}
+
+export async function getPointsLedger(userId: string): Promise<PointsLedgerEntry[]> {
+  try {
+    const db = await getDatabase()
+    const entries = await db.collection<PointsLedgerEntry>('points_ledger')
+      .find({ userId })
+      .sort({ timestamp: -1 })
+      .toArray()
+    return entries.map(entry => ({ ...entry, _id: undefined }))
+  } catch (error) {
+    console.error('Error fetching points ledger:', error)
+    return []
+  }
+}
+
+export async function getPointsSummary(userId: string): Promise<Record<string, number>> {
+  try {
+    const db = await getDatabase()
+    const entries = await db.collection<PointsLedgerEntry>('points_ledger')
+      .find({ userId })
+      .toArray()
+
+    const summary: Record<string, number> = {
+      daily_login: 0,
+      game: 0,
+      assessment: 0,
+      task: 0,
+      lesson: 0,
+    }
+
+    entries.forEach(entry => {
+      summary[entry.source] = (summary[entry.source] || 0) + entry.points
+    })
+
+    return summary
+  } catch (error) {
+    console.error('Error fetching points summary:', error)
+    return {}
+  }
+}
+
+// ===== ASSESSMENT SYSTEM =====
+
+export async function getAssessments(schoolId?: string): Promise<Assessment[]> {
+  try {
+    const db = await getDatabase()
+    const query = schoolId ? { schoolId, isActive: true } : { isActive: true }
+    const assessments = await db.collection<Assessment>('assessments')
+      .find(query)
+      .sort({ createdAt: -1 })
+      .toArray()
+    return assessments.map(assessment => ({ ...assessment, _id: undefined }))
+  } catch (error) {
+    console.error('Error fetching assessments:', error)
+    return []
+  }
+}
+
+export async function getAssessmentById(id: string): Promise<Assessment | null> {
+  try {
+    const db = await getDatabase()
+    const assessment = await db.collection<Assessment>('assessments').findOne({ id })
+    return assessment ? { ...assessment, _id: undefined } : null
+  } catch (error) {
+    console.error('Error fetching assessment by ID:', error)
+    return null
+  }
+}
+
+export async function saveAssessment(assessment: Assessment): Promise<void> {
+  try {
+    const db = await getDatabase()
+    await db.collection<Assessment>('assessments').updateOne(
+      { id: assessment.id },
+      { $set: assessment },
+      { upsert: true }
+    )
+  } catch (error) {
+    console.error('Error saving assessment:', error)
+    throw error
+  }
+}
+
+export async function deleteAssessment(id: string): Promise<void> {
+  try {
+    const db = await getDatabase()
+    // Soft delete by setting isActive to false
+    await db.collection<Assessment>('assessments').updateOne(
+      { id },
+      { $set: { isActive: false } }
+    )
+  } catch (error) {
+    console.error('Error deleting assessment:', error)
+    throw error
+  }
+}
+
+export async function saveAssessmentAttempt(attempt: AssessmentAttempt): Promise<void> {
+  try {
+    const db = await getDatabase()
+    await db.collection<AssessmentAttempt>('assessment_attempts').insertOne(attempt as any)
+  } catch (error) {
+    console.error('Error saving assessment attempt:', error)
+    throw error
+  }
+}
+
+export async function getAssessmentAttempts(userId: string): Promise<AssessmentAttempt[]> {
+  try {
+    const db = await getDatabase()
+    const attempts = await db.collection<AssessmentAttempt>('assessment_attempts')
+      .find({ userId })
+      .sort({ completedAt: -1 })
+      .toArray()
+    return attempts.map(attempt => ({ ...attempt, _id: undefined }))
+  } catch (error) {
+    console.error('Error fetching assessment attempts:', error)
+    return []
+  }
+}
+
+export async function hasCompletedAssessment(userId: string, assessmentId: string): Promise<boolean> {
+  try {
+    const db = await getDatabase()
+    const attempt = await db.collection<AssessmentAttempt>('assessment_attempts')
+      .findOne({ userId, assessmentId })
+    return !!attempt
+  } catch (error) {
+    console.error('Error checking assessment completion:', error)
+    return false
+  }
+}
+
+// ===== GAME SYSTEM =====
+
+export async function saveGameCompletion(completion: GameCompletion): Promise<void> {
+  try {
+    const db = await getDatabase()
+    await db.collection<GameCompletion>('game_completions').insertOne(completion as any)
+  } catch (error) {
+    console.error('Error saving game completion:', error)
+    throw error
+  }
+}
+
+export async function getGameCompletions(userId: string): Promise<GameCompletion[]> {
+  try {
+    const db = await getDatabase()
+    const completions = await db.collection<GameCompletion>('game_completions')
+      .find({ userId })
+      .sort({ completedAt: -1 })
+      .toArray()
+    return completions.map(completion => ({ ...completion, _id: undefined }))
+  } catch (error) {
+    console.error('Error fetching game completions:', error)
+    return []
+  }
+}
+
+export async function hasCompletedGame(userId: string, gameId: string): Promise<boolean> {
+  try {
+    const db = await getDatabase()
+    const completion = await db.collection<GameCompletion>('game_completions')
+      .findOne({ userId, gameId })
+    return !!completion
+  } catch (error) {
+    console.error('Error checking game completion:', error)
+    return false
+  }
+}
+
+// ===== EVENT LOGGING =====
+
+export async function logEvent(event: Omit<EventLog, 'id'>): Promise<void> {
+  try {
+    const db = await getDatabase()
+    const newEvent: EventLog = {
+      ...event,
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+    }
+    await db.collection<EventLog>('events_log').insertOne(newEvent as any)
+  } catch (error) {
+    console.error('Error logging event:', error)
+    // Don't throw - event logging should not break the main flow
+  }
+}
+
+export async function getEventLogs(userId: string, eventType?: EventLog['eventType']): Promise<EventLog[]> {
+  try {
+    const db = await getDatabase()
+    const query: any = eventType ? { userId, eventType } : { userId }
+    const events = await db.collection<EventLog>('events_log')
+      .find(query)
+      .sort({ timestamp: -1 })
+      .limit(100)
+      .toArray()
+    return events.map(event => ({ ...event, _id: undefined }))
+  } catch (error) {
+    console.error('Error fetching event logs:', error)
     return []
   }
 }

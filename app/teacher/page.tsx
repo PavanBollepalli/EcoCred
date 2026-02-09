@@ -26,6 +26,7 @@ import {
   BookOpen,
   Award,
   GraduationCap,
+  Brain,
 } from "lucide-react"
 import {
   getCurrentUser,
@@ -212,13 +213,14 @@ function TeacherDashboard() {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="w-full">
+          <TabsList className="w-full grid grid-cols-5 lg:grid-cols-10">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="students">Your Students</TabsTrigger>
             <TabsTrigger value="reviews">Reviews</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="tasks">Tasks</TabsTrigger>
             <TabsTrigger value="lessons">Lessons</TabsTrigger>
+            <TabsTrigger value="assessments">Assessments</TabsTrigger>
             <TabsTrigger value="badges">Badges</TabsTrigger>
             <TabsTrigger value="events">Events</TabsTrigger>
             <TabsTrigger value="announcements">Announcements</TabsTrigger>
@@ -1250,6 +1252,29 @@ function TeacherDashboard() {
           {/* Calendar Tab */}
           <TabsContent value="calendar" className="space-y-6">
             <Calendar schoolId={user?.school} showAddEvent={true} userRole={user?.role} />
+          </TabsContent>
+
+          {/* Assessments Tab */}
+          <TabsContent value="assessments" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="h-6 w-6 text-blue-600" />
+                  AI-Powered Assessments
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  Create custom assessments using AI to generate questions based on your syllabus and learning objectives.
+                </p>
+                <Link href="/teacher/create-assessment">
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Brain className="h-4 w-4 mr-2" />
+                    Create New Assessment
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
