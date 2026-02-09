@@ -34,7 +34,12 @@ export default function AssessmentsPage() {
                 const attemptsRes = await fetch(`/api/assessments/attempt?userId=${user.id}`)
                 if (attemptsRes.ok) {
                     const attempts = await attemptsRes.json()
-                    const completed = new Set(attempts.map((a: any) => a.assessmentId))
+                    // Only count completion if the assessment still exists
+                    const validAssessmentIds = new Set(assessmentsData.map((a: Assessment) => a.id))
+                    const completed = new Set<string>(attempts
+                        .map((a: any) => a.assessmentId)
+                        .filter((id: string) => validAssessmentIds.has(id))
+                    )
                     setCompletedIds(completed)
                 }
 

@@ -9,24 +9,29 @@ import {
     logEvent,
     getBadges,
     saveBadge,
-    getAssessmentAttempts
+    getAssessmentAttempts,
+    getAssessmentAttemptsByAssessmentId
 } from '@/lib/database'
 import type { AssessmentAttempt } from '@/lib/types'
 
-export const dynamic = 'force-dynamic'
-
-// GET - Fetch assessment attempts for a user
+// GET - Fetch assessment attempts for a user or assessment
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url)
         const userId = searchParams.get('userId')
+        const assessmentId = searchParams.get('assessmentId')
 
-        if (!userId) {
-            return NextResponse.json({ error: 'userId is required' }, { status: 400 })
+        if (userId) {
+            const attempts = await getAssessmentAttempts(userId)
+            return NextResponse.json(attempts)
         }
 
-        const attempts = await getAssessmentAttempts(userId)
-        return NextResponse.json(attempts)
+        if (assessmentId) {
+            const attempts = await getAssessmentAttemptsByAssessmentId(assessmentId)
+            return NextResponse.json(attempts)
+        }
+
+        return NextResponse.json({ error: 'userId or assessmentId is required' }, { status: 400 })
     } catch (error) {
         console.error('Error fetching assessment attempts:', error)
         return NextResponse.json({ error: 'Failed to fetch attempts' }, { status: 500 })
@@ -79,52 +84,58 @@ export async function POST(request: NextRequest) {
             })
         })
 
-        // Calculate points earned (proportional to score)
-        const pointsEarned = Math.round((score / maxScore) * assessment.totalPoints)
+        // Calculate percentage
+        const scorePercentage = (score / maxScore) * 100
+        const passed = scorePercentage >= 70
 
-        // Save attempt
-        const attempt: AssessmentAttempt = {
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-            userId,
-            assessmentId,
-            answers,
-            score,
-            maxScore,
-            completedAt: new Date().toISOString(),
-            pointsEarned,
-            badgeAwarded: false,
-        }
+        // Only mark as completed if passed (70% or higher)
+        if (passed) {
+            // Calculate points earned (proportional to score)
+            const pointsEarned = Math.round((score / maxScore) * assessment.totalPoints)
 
-        await saveAssessmentAttempt(attempt)
-
-        // Get user for updates
-        const users = await getUsers()
-        const user = users.find(u => u.id === userId)
-
-        if (!user) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 })
-        }
-
-        // Add points ledger entry
-        await addPointsLedgerEntry({
-            userId,
-            points: pointsEarned,
-            source: 'assessment',
-            sourceId: assessmentId,
-            timestamp: new Date().toISOString(),
-            metadata: {
-                assessmentTitle: assessment.title,
+            // Save attempt (only if passed)
+            const attempt: AssessmentAttempt = {
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                userId,
+                assessmentId,
+                answers,
                 score,
                 maxScore,
-            },
-        })
+                completedAt: new Date().toISOString(),
+                pointsEarned,
+                badgeAwarded: false,
+            }
 
-        // Award badge if score is high enough (e.g., 70% or higher)
-        let badgeAwarded = false
-        const scorePercentage = (score / maxScore) * 100
+            await saveAssessmentAttempt(attempt)
 
-        if (scorePercentage >= 70) {
-            // Check if badge exists, create if not
+            // Get user for updates
+            const users = await getUsers()
+            const user = users.find(u => u.id === userId)
+
+            if (!user) {
+                return NextResponse.json({ error: 'User not found' }, { status: 404 })
+            }
+
+            // Update user points
+            user.ecoPoints += pointsEarned
+            await saveUser(user)
+
+            // Add points ledger entry
+            await addPointsLedgerEntry({
+                userId,
+                points: pointsEarned,
+                source: 'assessment',
+                sourceId: assessmentId,
+                timestamp: new Date().toISOString(),
+                metadata: {
+                    assessmentTitle: assessment.title,
+                    score,
+                    maxScore,
+                },
+            })
+
+            // Award badge
+            let badgeAwarded = false
             const badges = await getBadges()
             let badge = badges.find(b => b.name === assessment.badgeName)
 
@@ -152,41 +163,56 @@ export async function POST(request: NextRequest) {
                 badgeAwarded = true
                 attempt.badgeAwarded = true
             }
-        }
 
-        // Update user with points and badge (single save operation)
-        const updatedUser = {
-            ...user,
-            ecoPoints: user.ecoPoints + pointsEarned,
-            badges: badgeAwarded ? [...user.badges, assessment.badgeName] : user.badges,
-        }
-        await saveUser(updatedUser)
+            // Update user with points and badge (single save operation)
+            const updatedUser = {
+                ...user,
+                ecoPoints: user.ecoPoints + pointsEarned,
+                badges: badgeAwarded ? [...user.badges, assessment.badgeName] : user.badges,
+            }
+            await saveUser(updatedUser)
 
-        // Log event
-        await logEvent({
-            userId,
-            eventType: 'assessment_completed',
-            eventData: {
-                assessmentId,
-                assessmentTitle: assessment.title,
-                score,
-                maxScore,
+            // Log event
+            await logEvent({
+                userId,
+                eventType: 'assessment_completed',
+                eventData: {
+                    assessmentId,
+                    assessmentTitle: assessment.title,
+                    score,
+                    maxScore,
+                    pointsEarned,
+                    badgeAwarded,
+                },
+                timestamp: new Date().toISOString(),
+            })
+
+            return NextResponse.json({
+                success: true,
+                passed: true,
+                attempt: {
+                    ...attempt,
+                    results,
+                },
                 pointsEarned,
                 badgeAwarded,
-            },
-            timestamp: new Date().toISOString(),
-        })
-
-        return NextResponse.json({
-            success: true,
-            attempt: {
-                ...attempt,
-                results,
-            },
-            pointsEarned,
-            badgeAwarded,
-            badgeName: badgeAwarded ? assessment.badgeName : undefined,
-        })
+                badgeName: badgeAwarded ? assessment.badgeName : undefined,
+            })
+        } else {
+            // Did not pass - allow retake
+            return NextResponse.json({
+                success: true,
+                passed: false,
+                attempt: {
+                    score,
+                    maxScore,
+                    results,
+                },
+                pointsEarned: 0,
+                badgeAwarded: false,
+                message: `You scored ${scorePercentage.toFixed(0)}%. You need 70% or higher to pass. You can retake this assessment!`,
+            })
+        }
     } catch (error) {
         console.error('Error submitting assessment attempt:', error)
         return NextResponse.json({ error: 'Failed to submit assessment' }, { status: 500 })

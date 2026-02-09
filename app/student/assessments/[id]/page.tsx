@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
-import { ArrowLeft, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle, XCircle, Loader2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { getCurrentUserFromSession } from '@/lib/storage-api'
 import type { Assessment, AssessmentQuestion } from '@/lib/types'
@@ -121,14 +121,24 @@ export default function TakeAssessmentPage() {
 
             setResults(data)
 
-            toast.success(
-                <div>
-                    <p className="font-bold">Assessment Completed! 🎉</p>
-                    <p>Score: {data.attempt.score}/{data.attempt.maxScore}</p>
-                    <p>+{data.pointsEarned} points</p>
-                    {data.badgeAwarded && <p>🏆 Badge: {data.badgeName}</p>}
-                </div>
-            )
+            if (data.passed) {
+                toast.success(
+                    <div>
+                        <p className="font-bold">Assessment Passed! 🎉</p>
+                        <p>Score: {data.attempt.score}/{data.attempt.maxScore}</p>
+                        <p>+{data.pointsEarned} points</p>
+                        {data.badgeAwarded && <p>🏆 Badge: {data.badgeName}</p>}
+                    </div>
+                )
+            } else {
+                toast.error(
+                    <div>
+                        <p className="font-bold">Not Quite! 📚</p>
+                        <p>Score: {data.attempt.score}/{data.attempt.maxScore}</p>
+                        <p>You need 70% to pass. Try again!</p>
+                    </div>
+                )
+            }
         } catch (error) {
             console.error('Error submitting assessment:', error)
             toast.error(error instanceof Error ? error.message : 'Failed to submit assessment')
@@ -180,17 +190,19 @@ export default function TakeAssessmentPage() {
                             Back to Assessments
                         </Button>
 
-                        <Card className="border-2 border-green-200 shadow-lg mb-6">
+                        <Card className={`border-2 shadow-lg mb-6 ${results.passed ? 'border-green-200' : 'border-orange-200'}`}>
                             <CardHeader>
-                                <CardTitle className="text-center text-3xl">Assessment Complete!</CardTitle>
+                                <CardTitle className="text-center text-3xl">
+                                    {results.passed ? 'Assessment Passed! 🎉' : 'Keep Learning! 📚'}
+                                </CardTitle>
                             </CardHeader>
                             <CardContent className="text-center space-y-6">
                                 <div className="text-6xl mb-4">
-                                    {scorePercentage >= 70 ? '🎉' : '📚'}
+                                    {results.passed ? '🎉' : '💪'}
                                 </div>
 
                                 <div>
-                                    <div className="text-5xl font-bold mb-2">
+                                    <div className={`text-5xl font-bold mb-2 ${results.passed ? 'text-green-600' : 'text-orange-600'}`}>
                                         {results.attempt.score}/{results.attempt.maxScore}
                                     </div>
                                     <div className="text-xl text-muted-foreground">
@@ -198,26 +210,44 @@ export default function TakeAssessmentPage() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-                                    <div className="p-4 bg-green-50 rounded-lg">
-                                        <div className="text-2xl font-bold text-green-600">+{results.pointsEarned}</div>
-                                        <div className="text-sm text-muted-foreground">Points Earned</div>
-                                    </div>
-                                    {results.badgeAwarded && (
-                                        <div className="p-4 bg-yellow-50 rounded-lg">
-                                            <div className="text-2xl">🏆</div>
-                                            <div className="text-sm font-semibold">{results.badgeName}</div>
+                                {results.passed ? (
+                                    <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+                                        <div className="p-4 bg-green-50 rounded-lg">
+                                            <div className="text-2xl font-bold text-green-600">+{results.pointsEarned}</div>
+                                            <div className="text-sm text-muted-foreground">Points Earned</div>
                                         </div>
-                                    )}
-                                </div>
+                                        {results.badgeAwarded && (
+                                            <div className="p-4 bg-yellow-50 rounded-lg">
+                                                <div className="text-2xl">🏆</div>
+                                                <div className="text-sm font-semibold">{results.badgeName}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                                            <p className="text-orange-800 font-medium mb-2">
+                                                You need 70% or higher to pass this assessment
+                                            </p>
+                                            <p className="text-sm text-orange-600">
+                                                Don't worry! You can retake this assessment to improve your score.
+                                            </p>
+                                        </div>
 
-                                {scorePercentage < 70 && (
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                        <p className="text-sm">
-                                            You need 70% or higher to earn the badge. Keep studying and try another assessment!
-                                        </p>
+                                        <Button
+                                            onClick={() => {
+                                                setResults(null)
+                                                setCurrentQuestionIndex(0)
+                                                setAnswers({})
+                                            }}
+                                            className="bg-orange-600 hover:bg-orange-700"
+                                        >
+                                            <RefreshCw className="h-4 w-4 mr-2" />
+                                            Retake Assessment
+                                        </Button>
                                     </div>
                                 )}
+
                             </CardContent>
                         </Card>
 

@@ -950,6 +950,20 @@ export async function getAssessmentAttempts(userId: string): Promise<AssessmentA
   }
 }
 
+export async function getAssessmentAttemptsByAssessmentId(assessmentId: string): Promise<AssessmentAttempt[]> {
+  try {
+    const db = await getDatabase()
+    const attempts = await db.collection<AssessmentAttempt>('assessment_attempts')
+      .find({ assessmentId })
+      .sort({ score: -1, completedAt: -1 })
+      .toArray()
+    return attempts.map(attempt => ({ ...attempt, _id: undefined }))
+  } catch (error) {
+    console.error('Error fetching assessment attempts by ID:', error)
+    return []
+  }
+}
+
 export async function hasCompletedAssessment(userId: string, assessmentId: string): Promise<boolean> {
   try {
     const db = await getDatabase()

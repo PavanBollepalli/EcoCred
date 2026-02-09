@@ -246,6 +246,9 @@ export interface Assessment {
   badgeName: string // Badge awarded on completion
   createdBy: string
   schoolId?: string
+  status: 'active' | 'draft' | 'archived'
+  difficulty: 'easy' | 'medium' | 'hard'
+  timeLimit: number // in minutes
   isActive: boolean
   createdAt: string
   updatedAt: string

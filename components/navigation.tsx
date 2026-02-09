@@ -46,7 +46,7 @@ export function Navigation() {
   ]
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
+    <header className="flex justify-center items-center sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="container flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center space-x-2 group">
           <div className="relative">
@@ -179,18 +179,18 @@ export function Navigation() {
                         key={item.href}
                         href={item.href}
                         className={`flex items-center space-x-4 p-4 rounded-xl transition-all duration-200 group ${isSpecial
-                            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 shadow-lg'
-                            : 'hover:bg-primary/5 hover:shadow-md border border-transparent hover:border-primary/20'
+                          ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 shadow-lg'
+                          : 'hover:bg-primary/5 hover:shadow-md border border-transparent hover:border-primary/20'
                           }`}
                         onClick={() => setIsOpen(false)}
                       >
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isSpecial
-                            ? 'bg-white/20'
-                            : 'bg-primary/10 group-hover:bg-primary/20'
+                          ? 'bg-white/20'
+                          : 'bg-primary/10 group-hover:bg-primary/20'
                           }`}>
                           <Icon className={`h-5 w-5 ${isSpecial
-                              ? 'text-white'
-                              : 'text-primary group-hover:text-primary'
+                            ? 'text-white'
+                            : 'text-primary group-hover:text-primary'
                             }`} />
                         </div>
                         <div className="flex-1">

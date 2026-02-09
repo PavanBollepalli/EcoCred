@@ -10,10 +10,11 @@ import type { User } from "@/lib/storage-api"
 interface AuthGuardProps {
   children: React.ReactNode
   requiredRole?: "student" | "teacher" | "admin"
+  allowedRoles?: ("student" | "teacher" | "admin")[]
   redirectTo?: string
 }
 
-export function AuthGuard({ children, requiredRole, redirectTo = "/login" }: AuthGuardProps) {
+export function AuthGuard({ children, requiredRole, allowedRoles, redirectTo = "/login" }: AuthGuardProps) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
@@ -27,22 +28,30 @@ export function AuthGuard({ children, requiredRole, redirectTo = "/login" }: Aut
     }
 
     if (requiredRole && currentUser.role !== requiredRole) {
-      // Redirect to appropriate portal based on user role
-      if (currentUser.role === "student") {
-        router.push("/student")
-      } else if (currentUser.role === "teacher") {
-        router.push("/teacher")
-      } else if (currentUser.role === "admin") {
-        router.push("/admin")
-      } else {
-        router.push("/")
-      }
+      handleRedirect(currentUser.role)
+      return
+    }
+
+    if (allowedRoles && !allowedRoles.includes(currentUser.role)) {
+      handleRedirect(currentUser.role)
       return
     }
 
     setUser(currentUser)
     setIsLoading(false)
-  }, [router, requiredRole, redirectTo])
+  }, [router, requiredRole, allowedRoles, redirectTo])
+
+  const handleRedirect = (role: string) => {
+    if (role === "student") {
+      router.push("/student")
+    } else if (role === "teacher") {
+      router.push("/teacher")
+    } else if (role === "admin") {
+      router.push("/admin")
+    } else {
+      router.push("/")
+    }
+  }
 
   if (isLoading) {
     return (
