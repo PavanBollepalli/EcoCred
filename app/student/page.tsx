@@ -53,6 +53,7 @@ import { ProfileCard } from "@/components/avatar"
 import { StudentProfile } from "@/components/student-profile"
 import { useBadgeChecker } from "@/hooks/use-badge-checker"
 import { AchievementPopup } from "@/components/celebrations/achievement-popup"
+import { DailyLoginReward } from "@/components/celebrations/daily-login-reward"
 
 export default function StudentPortal() {
   return (
@@ -71,6 +72,8 @@ function StudentDashboard() {
   const [completedLessonsCount, setCompletedLessonsCount] = useState(0)
   const [showAchievement, setShowAchievement] = useState(false)
   const [dailyRewardClaimed, setDailyRewardClaimed] = useState(false)
+  const [showDailyReward, setShowDailyReward] = useState(false)
+  const [dailyRewardPoints, setDailyRewardPoints] = useState(5)
   const router = useRouter()
 
   useEffect(() => {
@@ -110,6 +113,8 @@ function StudentDashboard() {
             const rewardResult = await claimDailyReward(sessionUser.id)
             if (rewardResult.awarded) {
               setDailyRewardClaimed(true)
+              setDailyRewardPoints(rewardResult.points || 5)
+              setShowDailyReward(true) // Show the animation
               // Refresh user data to show new points
               const updatedUser = await getCurrentUser(sessionUser.id)
               if (updatedUser) {
@@ -208,6 +213,14 @@ function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Daily Login Reward Animation */}
+      <DailyLoginReward
+        isOpen={showDailyReward}
+        points={dailyRewardPoints}
+        streak={user.streak}
+        onClose={() => setShowDailyReward(false)}
+      />
+
       {/* Achievement Celebration Popup */}
       <AchievementPopup
         badge={newlyEarnedBadge}

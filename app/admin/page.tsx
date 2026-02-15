@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Navigation } from "@/components/navigation"
 import { AuthGuard } from "@/components/auth/auth-guard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Progress } from "@/components/ui/progress"
 import { 
   Building2, 
   Users, 
@@ -25,10 +26,23 @@ import {
   Megaphone,
   Award,
   TrendingUp,
-  LogOut
+  LogOut,
+  Trophy,
+  Gamepad2,
+  BookOpen,
+  Flame,
+  Star,
+  Activity,
+  PieChart,
+  Download,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Zap,
+  Target
 } from "lucide-react"
-import { getUsers, getSchools, createSchool, updateSchool, deleteSchool, wipeAllData } from "@/lib/storage-api"
-import type { User, School } from "@/lib/storage-api"
+import { getUsers, getSchools, createSchool, updateSchool, deleteSchool, wipeAllData, deleteUser, getTasks, getSubmissions, getLessons } from "@/lib/storage-api"
+import type { User, School, Task, Submission, Lesson } from "@/lib/storage-api"
 import { SchoolDataList } from "@/components/school-data-list"
 
 export default function AdminPortal() {
@@ -42,11 +56,16 @@ export default function AdminPortal() {
 function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([])
   const [schools, setSchools] = useState<School[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [submissions, setSubmissions] = useState<Submission[]>([])
+  const [lessons, setLessons] = useState<Lesson[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null)
   const [showSchoolForm, setShowSchoolForm] = useState(false)
   const [editingSchool, setEditingSchool] = useState<School | null>(null)
+  const [roleFilter, setRoleFilter] = useState<string>("all")
+  const [deletingUser, setDeletingUser] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -54,12 +73,18 @@ function AdminDashboard() {
 
   const loadData = async () => {
     try {
-      const [usersData, schoolsData] = await Promise.all([
+      const [usersData, schoolsData, tasksData, submissionsData, lessonsData] = await Promise.all([
         getUsers(),
-        getSchools()
+        getSchools(),
+        getTasks(),
+        getSubmissions(),
+        getLessons()
       ])
       setUsers(usersData)
       setSchools(schoolsData)
+      setTasks(tasksData)
+      setSubmissions(submissionsData)
+      setLessons(lessonsData)
     } catch (error) {
       console.error('Error loading admin data:', error)
     } finally {
@@ -98,11 +123,28 @@ function AdminDashboard() {
     }
   }
 
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.school?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (confirm(`Are you sure you want to delete user "${userName}"? This will also remove all their submissions, points, and game completions. This action cannot be undone.`)) {
+      setDeletingUser(userId)
+      try {
+        await deleteUser(userId)
+        await loadData()
+      } catch (error) {
+        console.error('Error deleting user:', error)
+        alert('Failed to delete user. Admin users cannot be deleted.')
+      } finally {
+        setDeletingUser(null)
+      }
+    }
+  }
+
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.school?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesRole = roleFilter === "all" || user.role === roleFilter
+    return matchesSearch && matchesRole
+  })
 
   const stats = {
     totalUsers: users.length,
@@ -111,6 +153,85 @@ function AdminDashboard() {
     totalTeachers: users.filter(u => u.role === 'teacher').length,
     totalAdmins: users.filter(u => u.role === 'admin').length
   }
+
+  // Analytics computed data
+  const analytics = useMemo(() => {
+    const students = users.filter(u => u.role === 'student')
+    const teachers = users.filter(u => u.role === 'teacher')
+
+    // Points distribution
+    const totalPoints = students.reduce((sum, s) => sum + s.ecoPoints, 0)
+    const avgPoints = students.length > 0 ? Math.round(totalPoints / students.length) : 0
+    const maxPoints = students.length > 0 ? Math.max(...students.map(s => s.ecoPoints)) : 0
+
+    // Top performers
+    const topStudents = [...students].sort((a, b) => b.ecoPoints - a.ecoPoints).slice(0, 10)
+
+    // Points range distribution
+    const pointsRanges = [
+      { label: '0-25', count: students.filter(s => s.ecoPoints >= 0 && s.ecoPoints <= 25).length },
+      { label: '26-50', count: students.filter(s => s.ecoPoints > 25 && s.ecoPoints <= 50).length },
+      { label: '51-100', count: students.filter(s => s.ecoPoints > 50 && s.ecoPoints <= 100).length },
+      { label: '101-250', count: students.filter(s => s.ecoPoints > 100 && s.ecoPoints <= 250).length },
+      { label: '251-500', count: students.filter(s => s.ecoPoints > 250 && s.ecoPoints <= 500).length },
+      { label: '500+', count: students.filter(s => s.ecoPoints > 500).length },
+    ]
+    const maxRangeCount = Math.max(...pointsRanges.map(r => r.count), 1)
+
+    // Streak distribution
+    const avgStreak = students.length > 0 ? Math.round(students.reduce((s, u) => s + u.streak, 0) / students.length) : 0
+    const maxStreak = students.length > 0 ? Math.max(...students.map(s => s.streak)) : 0
+    const activeStreaks = students.filter(s => s.streak > 0).length
+
+    // Submissions analysis
+    const approvedSubmissions = submissions.filter(s => s.status === 'approved').length
+    const pendingSubmissions = submissions.filter(s => s.status === 'pending').length
+    const rejectedSubmissions = submissions.filter(s => s.status === 'rejected').length
+    const totalSubmissions = submissions.length
+    const approvalRate = totalSubmissions > 0 ? Math.round((approvedSubmissions / totalSubmissions) * 100) : 0
+
+    // Tasks analysis
+    const tasksByCategory = tasks.reduce((acc, t) => {
+      acc[t.category] = (acc[t.category] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    // School performance
+    const schoolPerformance = schools.map(school => {
+      const schoolStudents = students.filter(s => s.school === school.name)
+      const schoolTotalPoints = schoolStudents.reduce((sum, s) => sum + s.ecoPoints, 0)
+      const schoolAvgPoints = schoolStudents.length > 0 ? Math.round(schoolTotalPoints / schoolStudents.length) : 0
+      const schoolSubmissions = submissions.filter(s => schoolStudents.some(st => st.id === s.studentId))
+      return {
+        name: school.name,
+        studentCount: schoolStudents.length,
+        teacherCount: teachers.filter(t => t.school === school.name).length,
+        totalPoints: schoolTotalPoints,
+        avgPoints: schoolAvgPoints,
+        submissions: schoolSubmissions.length,
+        isActive: school.isActive
+      }
+    }).sort((a, b) => b.totalPoints - a.totalPoints)
+
+    // Lessons completed per student
+    const avgLessonsCompleted = students.length > 0
+      ? Math.round(students.reduce((sum, s) => sum + (s.completedLessons?.length || 0), 0) / students.length * 10) / 10
+      : 0
+
+    // Badges statistics
+    const totalBadgesEarned = students.reduce((sum, s) => sum + (s.badges?.length || 0), 0)
+    const avgBadges = students.length > 0 ? Math.round(totalBadgesEarned / students.length * 10) / 10 : 0
+
+    return {
+      totalPoints, avgPoints, maxPoints, topStudents, pointsRanges, maxRangeCount,
+      avgStreak, maxStreak, activeStreaks,
+      approvedSubmissions, pendingSubmissions, rejectedSubmissions, totalSubmissions, approvalRate,
+      tasksByCategory,
+      schoolPerformance,
+      avgLessonsCompleted, totalBadgesEarned, avgBadges,
+      totalLessons: lessons.length, totalTasks: tasks.length
+    }
+  }, [users, schools, submissions, tasks, lessons])
 
   const handleLogout = () => {
     sessionStorage.removeItem('ecocred_current_user')
@@ -227,12 +348,11 @@ function AdminDashboard() {
         </div>
 
         <Tabs defaultValue="schools" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="schools">Schools</TabsTrigger>
             <TabsTrigger value="school-data">School Data</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
           {/* Schools Tab */}
@@ -309,6 +429,19 @@ function AdminDashboard() {
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">User Management</h2>
               <div className="flex items-center space-x-2">
+                <div className="flex space-x-1">
+                  {["all", "student", "teacher", "admin"].map(role => (
+                    <Button
+                      key={role}
+                      variant={roleFilter === role ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setRoleFilter(role)}
+                      className="capitalize"
+                    >
+                      {role === "all" ? "All" : role + "s"}
+                    </Button>
+                  ))}
+                </div>
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search users..."
@@ -317,6 +450,10 @@ function AdminDashboard() {
                   className="w-64"
                 />
               </div>
+            </div>
+
+            <div className="text-sm text-muted-foreground mb-2">
+              Showing {filteredUsers.length} of {users.length} users
             </div>
 
             <div className="space-y-4">
@@ -344,96 +481,356 @@ function AdminDashboard() {
                           <p className="text-sm font-medium">{user.ecoPoints} points</p>
                           <p className="text-xs text-muted-foreground">{user.streak} day streak</p>
                         </div>
+                        <div className="text-right text-xs text-muted-foreground">
+                          <p>Badges: {user.badges?.length || 0}</p>
+                          <p>Lessons: {user.completedLessons?.length || 0}</p>
+                        </div>
+                        {user.role !== 'admin' && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteUser(user.id, user.name)}
+                            disabled={deletingUser === user.id}
+                            className="ml-2"
+                          >
+                            {deletingUser === user.id ? (
+                              <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               ))}
+              {filteredUsers.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No users found matching your criteria.</p>
+                </div>
+              )}
             </div>
           </TabsContent>
 
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">
             <h2 className="text-2xl font-bold">Analytics & Reports</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            {/* Overview KPIs */}
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <Trophy className="h-6 w-6 text-amber-500 mx-auto mb-1" />
+                  <div className="text-2xl font-bold text-amber-600">{analytics.totalPoints}</div>
+                  <div className="text-xs text-muted-foreground">Total Eco-Points</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <Star className="h-6 w-6 text-purple-500 mx-auto mb-1" />
+                  <div className="text-2xl font-bold text-purple-600">{analytics.avgPoints}</div>
+                  <div className="text-xs text-muted-foreground">Avg Points/Student</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <Flame className="h-6 w-6 text-orange-500 mx-auto mb-1" />
+                  <div className="text-2xl font-bold text-orange-600">{analytics.maxStreak}</div>
+                  <div className="text-xs text-muted-foreground">Highest Streak</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <CheckCircle className="h-6 w-6 text-green-500 mx-auto mb-1" />
+                  <div className="text-2xl font-bold text-green-600">{analytics.approvalRate}%</div>
+                  <div className="text-xs text-muted-foreground">Approval Rate</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <Award className="h-6 w-6 text-blue-500 mx-auto mb-1" />
+                  <div className="text-2xl font-bold text-blue-600">{analytics.totalBadgesEarned}</div>
+                  <div className="text-xs text-muted-foreground">Badges Earned</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <BookOpen className="h-6 w-6 text-teal-500 mx-auto mb-1" />
+                  <div className="text-2xl font-bold text-teal-600">{analytics.avgLessonsCompleted}</div>
+                  <div className="text-xs text-muted-foreground">Avg Lessons/Student</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Points Distribution */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <BarChart3 className="h-5 w-5 text-primary" />
-                    <span>User Growth</span>
+                    <span>Points Distribution</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-8">
-                    <TrendingUp className="h-12 w-12 text-primary mx-auto mb-4" />
-                    <p className="text-muted-foreground">Analytics coming soon</p>
+                  <div className="space-y-3">
+                    {analytics.pointsRanges.map(range => (
+                      <div key={range.label} className="flex items-center gap-3">
+                        <span className="text-xs font-mono w-16 text-right text-muted-foreground">{range.label}</span>
+                        <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-end pr-2 transition-all duration-500"
+                            style={{ width: `${Math.max((range.count / analytics.maxRangeCount) * 100, range.count > 0 ? 15 : 0)}%` }}
+                          >
+                            {range.count > 0 && <span className="text-[10px] font-bold text-white">{range.count}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 pt-4 border-t grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-lg font-bold text-green-600">{analytics.avgPoints}</div>
+                      <div className="text-xs text-muted-foreground">Average</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-blue-600">{analytics.maxPoints}</div>
+                      <div className="text-xs text-muted-foreground">Highest</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold text-purple-600">{stats.totalStudents}</div>
+                      <div className="text-xs text-muted-foreground">Total Students</div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
+              {/* Top Performers */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <Award className="h-5 w-5 text-primary" />
-                    <span>Top Performers</span>
+                    <Trophy className="h-5 w-5 text-amber-500" />
+                    <span>Top 10 Performers</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-8">
-                    <Award className="h-12 w-12 text-primary mx-auto mb-4" />
-                    <p className="text-muted-foreground">Leaderboard analytics coming soon</p>
+                  {analytics.topStudents.length > 0 ? (
+                    <div className="space-y-2">
+                      {analytics.topStudents.map((student, index) => (
+                        <div key={student.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                              index === 0 ? 'bg-amber-400 text-amber-900' :
+                              index === 1 ? 'bg-gray-300 text-gray-700' :
+                              index === 2 ? 'bg-orange-300 text-orange-800' :
+                              'bg-gray-100 text-gray-600'
+                            }`}>
+                              {index + 1}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">{student.name}</p>
+                              <p className="text-xs text-muted-foreground">{student.school}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-primary">{student.ecoPoints} pts</p>
+                            <p className="text-xs text-muted-foreground">{student.badges?.length || 0} badges</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Trophy className="h-12 w-12 mx-auto mb-4 opacity-40" />
+                      <p>No student data available yet</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Submissions Analysis */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Activity className="h-5 w-5 text-blue-500" />
+                    <span>Submissions Analysis</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="text-center p-3 rounded-xl bg-green-50 border border-green-200">
+                      <CheckCircle className="h-6 w-6 text-green-500 mx-auto mb-1" />
+                      <div className="text-2xl font-bold text-green-600">{analytics.approvedSubmissions}</div>
+                      <div className="text-xs text-green-700">Approved</div>
+                    </div>
+                    <div className="text-center p-3 rounded-xl bg-yellow-50 border border-yellow-200">
+                      <Clock className="h-6 w-6 text-yellow-500 mx-auto mb-1" />
+                      <div className="text-2xl font-bold text-yellow-600">{analytics.pendingSubmissions}</div>
+                      <div className="text-xs text-yellow-700">Pending</div>
+                    </div>
+                    <div className="text-center p-3 rounded-xl bg-red-50 border border-red-200">
+                      <AlertTriangle className="h-6 w-6 text-red-500 mx-auto mb-1" />
+                      <div className="text-2xl font-bold text-red-600">{analytics.rejectedSubmissions}</div>
+                      <div className="text-xs text-red-700">Rejected</div>
+                    </div>
                   </div>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-green-600">Approved</span>
+                        <span className="font-medium">{analytics.approvalRate}%</span>
+                      </div>
+                      <Progress value={analytics.approvalRate} className="h-2" />
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-yellow-600">Pending</span>
+                        <span className="font-medium">{analytics.totalSubmissions > 0 ? Math.round((analytics.pendingSubmissions / analytics.totalSubmissions) * 100) : 0}%</span>
+                      </div>
+                      <Progress value={analytics.totalSubmissions > 0 ? (analytics.pendingSubmissions / analytics.totalSubmissions) * 100 : 0} className="h-2" />
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-4 border-t text-center">
+                    <div className="text-3xl font-bold text-primary">{analytics.totalSubmissions}</div>
+                    <div className="text-sm text-muted-foreground">Total Submissions</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Tasks & Engagement */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Target className="h-5 w-5 text-indigo-500" />
+                    <span>Content & Engagement</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="text-center p-3 rounded-xl bg-indigo-50 border border-indigo-200">
+                      <div className="text-2xl font-bold text-indigo-600">{analytics.totalTasks}</div>
+                      <div className="text-xs text-indigo-700">Total Tasks</div>
+                    </div>
+                    <div className="text-center p-3 rounded-xl bg-teal-50 border border-teal-200">
+                      <div className="text-2xl font-bold text-teal-600">{analytics.totalLessons}</div>
+                      <div className="text-xs text-teal-700">Total Lessons</div>
+                    </div>
+                  </div>
+
+                  <h4 className="text-sm font-semibold mb-3">Tasks by Category</h4>
+                  <div className="space-y-2">
+                    {Object.entries(analytics.tasksByCategory).map(([category, count]) => {
+                      const colors: Record<string, string> = {
+                        planting: 'bg-green-500', waste: 'bg-orange-500', energy: 'bg-yellow-500', water: 'bg-blue-500'
+                      }
+                      const icons: Record<string, string> = {
+                        planting: '🌳', waste: '♻️', energy: '⚡', water: '💧'
+                      }
+                      return (
+                        <div key={category} className="flex items-center gap-3">
+                          <span className="text-lg">{icons[category] || '📋'}</span>
+                          <span className="text-sm capitalize w-20">{category}</span>
+                          <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${colors[category] || 'bg-gray-400'}`}
+                              style={{ width: `${analytics.totalTasks > 0 ? ((count as number) / analytics.totalTasks) * 100 : 0}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-bold w-8 text-right">{count as number}</span>
+                        </div>
+                      )
+                    })}
+                    {Object.keys(analytics.tasksByCategory).length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">No tasks created yet</p>
+                    )}
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t">
+                    <h4 className="text-sm font-semibold mb-3">Engagement Metrics</h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-orange-600">{analytics.activeStreaks}</div>
+                        <div className="text-[10px] text-muted-foreground">Active Streaks</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-purple-600">{analytics.avgStreak}</div>
+                        <div className="text-[10px] text-muted-foreground">Avg Streak</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-xl font-bold text-blue-600">{analytics.avgBadges}</div>
+                        <div className="text-[10px] text-muted-foreground">Avg Badges</div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* School Performance Comparison */}
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Building2 className="h-5 w-5 text-blue-500" />
+                    <span>School Performance Comparison</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {analytics.schoolPerformance.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-3 px-2 font-semibold">Rank</th>
+                            <th className="text-left py-3 px-2 font-semibold">School</th>
+                            <th className="text-center py-3 px-2 font-semibold">Students</th>
+                            <th className="text-center py-3 px-2 font-semibold">Teachers</th>
+                            <th className="text-center py-3 px-2 font-semibold">Total Points</th>
+                            <th className="text-center py-3 px-2 font-semibold">Avg Points</th>
+                            <th className="text-center py-3 px-2 font-semibold">Submissions</th>
+                            <th className="text-center py-3 px-2 font-semibold">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {analytics.schoolPerformance.map((school, index) => (
+                            <tr key={school.name} className="border-b hover:bg-muted/30 transition-colors">
+                              <td className="py-3 px-2">
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                  index === 0 ? 'bg-amber-400 text-amber-900' :
+                                  index === 1 ? 'bg-gray-300 text-gray-700' :
+                                  index === 2 ? 'bg-orange-300 text-orange-800' :
+                                  'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {index + 1}
+                                </div>
+                              </td>
+                              <td className="py-3 px-2 font-medium">{school.name}</td>
+                              <td className="py-3 px-2 text-center">{school.studentCount}</td>
+                              <td className="py-3 px-2 text-center">{school.teacherCount}</td>
+                              <td className="py-3 px-2 text-center font-bold text-primary">{school.totalPoints}</td>
+                              <td className="py-3 px-2 text-center">{school.avgPoints}</td>
+                              <td className="py-3 px-2 text-center">{school.submissions}</td>
+                              <td className="py-3 px-2 text-center">
+                                <Badge variant={school.isActive ? "default" : "destructive"} className="text-xs">
+                                  {school.isActive ? "Active" : "Inactive"}
+                                </Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Building2 className="h-12 w-12 mx-auto mb-4 opacity-40" />
+                      <p>No school data available. Create schools to see performance comparisons.</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-6">
-            <h2 className="text-2xl font-bold">System Settings</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Platform Settings</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="platform-name">Platform Name</Label>
-                    <Input id="platform-name" defaultValue="EcoCred Web" />
-                  </div>
-                  <div>
-                    <Label htmlFor="platform-description">Platform Description</Label>
-                    <Textarea 
-                      id="platform-description" 
-                      defaultValue="Environmental education platform for schools"
-                    />
-                  </div>
-                  <Button>Save Settings</Button>
-                </CardContent>
-              </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Feature Toggles</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label>Enable Chat Widget</Label>
-                    <input type="checkbox" defaultChecked className="rounded" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label>Enable Leaderboard</Label>
-                    <input type="checkbox" defaultChecked className="rounded" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label>Enable Notifications</Label>
-                    <input type="checkbox" defaultChecked className="rounded" />
-                  </div>
-                  <Button>Update Features</Button>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
         </Tabs>
 
         {/* School Form Modal */}

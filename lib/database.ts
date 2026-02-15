@@ -55,6 +55,23 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   }
 }
 
+export async function deleteUser(userId: string): Promise<boolean> {
+  try {
+    const db = await getDatabase()
+    const result = await db.collection<User>('users').deleteOne({ id: userId })
+    // Also clean up related data
+    await db.collection('submissions').deleteMany({ studentId: userId })
+    await db.collection('points_ledger').deleteMany({ userId })
+    await db.collection('game_completions').deleteMany({ userId })
+    await db.collection('assessment_attempts').deleteMany({ userId })
+    await db.collection('event_logs').deleteMany({ userId })
+    return result.deletedCount > 0
+  } catch (error) {
+    console.error('Error deleting user:', error)
+    return false
+  }
+}
+
 // Task management
 export async function getTasks(): Promise<Task[]> {
   try {

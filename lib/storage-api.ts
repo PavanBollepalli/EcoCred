@@ -163,6 +163,17 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
   }
 }
 
+export const deleteUser = async (userId: string): Promise<void> => {
+  try {
+    await apiCall(`/api/users/${userId}`, {
+      method: 'DELETE',
+    })
+  } catch (error) {
+    console.error('Error deleting user:', error)
+    throw error
+  }
+}
+
 // Task management
 export const getTasks = async (): Promise<Task[]> => {
   try {
