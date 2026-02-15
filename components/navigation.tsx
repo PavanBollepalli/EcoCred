@@ -1,16 +1,24 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { Menu, Leaf, User, GraduationCap, BarChart3, Home, BookOpen, Users, Settings, Image, LogOut, Info } from "lucide-react"
 import { getCurrentUserFromSession } from "@/lib/storage-api"
+import type { User as UserType } from "@/lib/types"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
-  const currentUser = getCurrentUserFromSession()
+  const [currentUser, setCurrentUser] = useState<UserType | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  // Defer sessionStorage read to client-side only to prevent hydration mismatch
+  useEffect(() => {
+    setCurrentUser(getCurrentUserFromSession())
+    setMounted(true)
+  }, [])
 
   const handleLogout = () => {
     sessionStorage.removeItem('ecocred_current_user')

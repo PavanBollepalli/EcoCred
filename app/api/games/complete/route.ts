@@ -160,6 +160,13 @@ export async function POST(request: NextRequest) {
             pointsEarned: game.points,
             badgeAwarded,
             badgeName: game.badgeName,
+            badge: badgeAwarded && badge ? {
+                id: badge.id,
+                name: badge.name,
+                description: badge.description,
+                icon: badge.icon,
+                color: badge.color,
+            } : null,
             newTotal: updatedUser.ecoPoints + game.points,
         })
     } catch (error) {

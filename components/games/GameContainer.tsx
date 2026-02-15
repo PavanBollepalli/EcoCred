@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { Trophy, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { Confetti } from '@/components/celebrations/confetti'
+import { AchievementPopup } from '@/components/celebrations/achievement-popup'
+import type { Badge as BadgeType } from '@/lib/types'
 
 interface GameContainerProps {
     gameId: string
@@ -30,6 +32,8 @@ export function GameContainer({
     )
     const [showConfetti, setShowConfetti] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [earnedBadge, setEarnedBadge] = useState<BadgeType | null>(null)
+    const [showAchievement, setShowAchievement] = useState(false)
 
     const handleStart = () => {
         setGameState('playing')
@@ -58,7 +62,29 @@ export function GameContainer({
             }
 
             setGameState('completed')
-            setShowConfetti(true)
+
+            // If badge was awarded, show the full AchievementPopup
+            if (data.badgeAwarded && data.badge) {
+                // Build a full badge object for the AchievementPopup
+                const awardedBadge: BadgeType = {
+                    id: data.badge.id,
+                    name: data.badge.name,
+                    description: data.badge.description,
+                    icon: data.badge.icon,
+                    color: data.badge.color,
+                    requirement: { type: 'tasks', value: 1 },
+                    createdBy: 'system',
+                    isActive: true,
+                    createdAt: new Date().toISOString(),
+                }
+                setEarnedBadge(awardedBadge)
+                // Small delay so the game-complete state renders first
+                setTimeout(() => setShowAchievement(true), 600)
+            } else {
+                // No badge — just show confetti + toast
+                setShowConfetti(true)
+                setTimeout(() => setShowConfetti(false), 5000)
+            }
 
             toast.success(
                 <div>
@@ -69,9 +95,6 @@ export function GameContainer({
             )
 
             onComplete(score)
-
-            // Hide confetti after 5 seconds
-            setTimeout(() => setShowConfetti(false), 5000)
         } catch (error) {
             console.error('Error recording game completion:', error)
             toast.error(error instanceof Error ? error.message : 'Failed to record completion')
@@ -80,9 +103,21 @@ export function GameContainer({
         }
     }
 
+    const handleAchievementClose = () => {
+        setShowAchievement(false)
+        setEarnedBadge(null)
+    }
+
     return (
         <div className="relative">
-            {showConfetti && <Confetti />}
+            {showConfetti && <Confetti isActive={showConfetti} />}
+
+            {/* Badge earned celebration popup */}
+            <AchievementPopup
+                badge={earnedBadge}
+                isOpen={showAchievement}
+                onClose={handleAchievementClose}
+            />
 
             <Card className="border-2 border-primary/20 shadow-lg">
                 <CardHeader>
