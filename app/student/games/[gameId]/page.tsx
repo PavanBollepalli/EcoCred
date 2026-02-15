@@ -28,12 +28,12 @@ const GAMES: Record<string, { component: any; name: string; description: string 
     'water-conservation': {
         component: WaterConservationGame,
         name: 'Water Conservation',
-        description: 'Fix all leaking taps to conserve precious water resources',
+        description: 'Find and fix water leaks across 3 scenarios with real-time water meters and knowledge quizzes!',
     },
     'pollution-cleanup': {
         component: PollutionCleanupGame,
         name: 'Pollution Cleanup',
-        description: 'Clean up pollution to restore the environment',
+        description: 'Sort pollution into correct waste bins across 3 environments — Beach, Park, and River!',
     },
 }
 

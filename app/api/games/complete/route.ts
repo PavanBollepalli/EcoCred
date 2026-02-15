@@ -111,16 +111,16 @@ export async function POST(request: NextRequest) {
         let badge = badges.find(b => b.name === game.badgeName)
 
         if (!badge) {
-            // Create the badge
+            // Create the badge with a deterministic ID based on game
             badge = {
-                id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                id: `game-badge-${gameId}`,
                 name: game.badgeName,
                 description: `Completed the ${game.name} game`,
                 icon: game.category === 'energy' ? 'Zap' : game.category === 'waste' ? 'Recycle' : game.category === 'water' ? 'Droplets' : 'TreePine',
                 color: game.category === 'energy' ? 'bg-yellow-500' : game.category === 'waste' ? 'bg-green-500' : game.category === 'water' ? 'bg-blue-500' : 'bg-emerald-500',
                 requirement: {
-                    type: 'points',
-                    value: 0, // Auto-awarded
+                    type: 'tasks',
+                    value: 1, // Requires game completion - not auto-awarded
                 },
                 createdBy: 'system',
                 isActive: true,
@@ -129,11 +129,12 @@ export async function POST(request: NextRequest) {
             await saveBadge(badge)
         }
 
-        // Award badge to user
-        if (!user.badges.includes(game.badgeName)) {
+        // Award badge to user using badge ID for consistency
+        const badgeId = badge.id
+        if (!user.badges.includes(badgeId)) {
             const updatedUserWithBadge = {
                 ...updatedUser,
-                badges: [...user.badges, game.badgeName],
+                badges: [...user.badges, badgeId],
             }
             await saveUser(updatedUserWithBadge)
             badgeAwarded = true
@@ -175,9 +176,13 @@ export async function GET(request: NextRequest) {
 
         const gamesList = Object.values(GAMES).map(game => ({
             ...game,
-            difficulty: 'easy' as const,
-            estimatedTime: '5 minutes',
-            description: `Learn about ${game.category} through interactive gameplay`,
+            difficulty: game.id === 'pollution-cleanup' || game.id === 'water-conservation' ? 'medium' as const : 'easy' as const,
+            estimatedTime: game.id === 'pollution-cleanup' ? '8-10 minutes' : game.id === 'water-conservation' ? '8-10 minutes' : '5 minutes',
+            description: game.id === 'pollution-cleanup'
+                ? 'Sort pollution into correct waste bins across 3 environments — Beach, Park, and River!'
+                : game.id === 'water-conservation'
+                ? 'Find and fix water leaks across 3 scenarios with real-time water meters and knowledge quizzes!'
+                : `Learn about ${game.category} through interactive gameplay`,
         }))
 
         // If userId provided, check completion status

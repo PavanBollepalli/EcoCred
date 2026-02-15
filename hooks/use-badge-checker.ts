@@ -70,7 +70,7 @@ function calculateBadgeProgress(
         badge,
         current,
         required: requirement.value,
-        isEarned: current >= requirement.value
+        isEarned: requirement.value > 0 ? current >= requirement.value : false
     }
 }
 
@@ -103,8 +103,8 @@ export function useBadgeChecker({ user, submissions, onBadgeEarned }: UseBadgeCh
             const bp = calculateBadgeProgress(badge, user, submissions)
             progress.push(bp)
 
-            // Check if this is a newly earned badge
-            if (bp.isEarned && !userBadges.has(badge.id) && !checkedBadges.has(badge.id)) {
+            // Check if this is a newly earned badge (check both ID and name)
+            if (bp.isEarned && !userBadges.has(badge.id) && !userBadges.has(badge.name) && !checkedBadges.has(badge.id)) {
                 // Mark as checked to prevent double-triggering
                 setCheckedBadges(prev => new Set([...prev, badge.id]))
 

@@ -156,8 +156,16 @@ export function BadgeSystem({ userPoints, userBadges, completedTasks, streak }: 
     fetchBadges()
   }, [])
 
-  // Combine static and dynamic badges
-  const allBadges = [...STATIC_BADGE_DEFINITIONS, ...dynamicBadges]
+  // Use dynamic badges if available, otherwise fall back to static badges
+  // Avoid duplicating badges by checking IDs
+  const allBadges = dynamicBadges.length > 0
+    ? [
+        ...STATIC_BADGE_DEFINITIONS.filter(
+          (sb) => !dynamicBadges.some((db) => db.id === sb.id || db.name === sb.name)
+        ),
+        ...dynamicBadges,
+      ]
+    : STATIC_BADGE_DEFINITIONS
 
   const getBadgeProgress = (badge: BadgeDefinition) => {
     let current = 0
@@ -214,9 +222,10 @@ export function BadgeSystem({ userPoints, userBadges, completedTasks, streak }: 
   }
 
   const isEarned = (badge: BadgeDefinition) => {
-    // Check if badge is in user's badges array
-    if (userBadges.includes(badge.id)) return true
-    // Also check if progress meets requirement (for auto-earned)
+    // Check if badge is explicitly in user's badges array (by ID or name)
+    if (userBadges.includes(badge.id) || userBadges.includes(badge.name)) return true
+    // Only auto-earn if requirement > 0 and progress meets it
+    if (badge.requirement <= 0) return false
     const progress = getBadgeProgress(badge)
     return progress >= badge.requirement
   }
