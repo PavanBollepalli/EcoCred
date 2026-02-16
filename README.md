@@ -1,204 +1,166 @@
+# EcoCred: Gamified Environmental Education Platform 🌿
 
-<div align="center">
+![EcoCred Architecture](assets/system%20design.png)
 
-# 🌱 EcoCred Web
-
-### *Gamified Environmental Education Platform*
-
-*Turning climate education into climate action, one student at a time* 🌍✨
-
-[![Next.js](https://img.shields.io/badge/Next.js-14.2.16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-7.0-green?style=for-the-badge&logo=mongodb)](https://mongodb.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)](https://typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.1.9-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
-[![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?style=for-the-badge&logo=docker)](https://docker.com/)
-
-
-
-</div>
+> **EcoCred** is an AI-powered, gamified platform designed to empower students and schools to take climate action. It creates a verifiable ecosystem where environmental tasks are tracked, validated by AI, and rewarded with "EcoPoints."
 
 ---
 
+## 📚 Table of Contents
+- [Overview](#-overview)
+- [Key Features](#-key-features)
+- [System Architecture](#-system-architecture)
+- [Database Schema](#-database-schema)
+- [User Workflows](#-user-workflows)
+- [Tech Stack](#-tech-stack)
+- [API Reference](#-api-reference)
+- [Getting Started](#-getting-started)
+
+---
 
 ## 🎯 Overview
 
-EcoCred Web is a **comprehensive gamified environmental education platform** that transforms sustainability learning into an engaging, measurable, and community-driven experience. Through interactive lessons, real-world eco tasks, and AI-powered assistance, students earn points, badges, and ranks while teachers track engagement and environmental impact.
+EcoCred bridges the gap between *learning* about climate change and *doing* something about it. Traditional education often lacks practical application verification. EcoCred solves this by using AI to verify real-world actions (planting trees, segregating waste) uploaded by students.
 
-### 🌟 Key Features
-
-<table>
-
-<tr>
-<td width="50%">
-
-**🎮 Gamified Learning**  
-Points, badges, leaderboards, and progress tracking.
-
-**📚 Interactive Lessons**  
-Engaging environmental education content.
-
-**🌍 Real-World Tasks**  
-Verified eco-actions with impact measurement.
-
-**🤖 AI Chat Assistant**  
-24/7 environmental guidance and support.
-
-</td>
-<td width="50%">
-
-**👥 Multi-Role System**  
-Students, teachers, and admin interfaces
-
-**📊 Analytics Dashboard**  
-Comprehensive progress and impact tracking
-
-**🏫 School Management**  
-Multi-school support with individual dashboards
-
-**📱 Responsive Design**  
-Works seamlessly across all devices
-
-</td>
-</tr>
-</table>
+### The EcoCred Ecosystem
+1.  **Student Actions**: Students perform eco-friendly tasks.
+2.  **AI Verification**: Detailed computer vision models analyze proof photos.
+3.  **Gamified Rewards**: Points, badges, and leaderboards drive sustained engagement.
+4.  **School Analytics**: Institutions get measurable data on their environmental impact.
 
 ---
 
-## 🚀 Quick Start
+## 🌟 Key Features
 
-### 📋 Prerequisites.
+### 🤖 AI-Verified Impact
+- **Automated Validation**: Uses custom-trained **YOLOv8** and **ResNet50** models.
+- **Smart Feedback**: Instant analysis of uploaded images (e.g., "Plant detected with 95% confidence").
+- **Fraud Prevention**: Rejects irrelevant or duplicate submissions.
 
-> **Required:** Node.js 18+ | **Recommended:** Docker | **Optional:** MongoDB (local)
+### 🎮 Advanced Gamification
+- **EcoPoints Engine**: Points awarded based on task difficulty and impact.
+- **Dynamic Badges**: Achievements like "Tree Planter", "Waste Warrior".
+- **Leaderboards**: Compete at Class, School, and Regional levels.
+- **Interactive UI**: Confetti celebrations and progress bars.
 
-### 🐳 Docker Setup *(Recommended)*
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/your-org/eco-cred.git
-cd eco-cred
-
-# 2. Build and run with Docker
-docker build -t eco-cred .
-docker run -p 3000:3000 eco-cred
-
-# 3. Access the application
-# 🌐 http://localhost:3000
-```
-
-### 💻 Local Development    
-
-```bash
-# 1. Install dependencies
-npm install
-
-# 2. Set up environment variables
-cp .env.example .env.local
-# Edit .env.local with your configuration
-
-# 3. Start MongoDB (if not using Docker)
-docker run -d -p 27017:27017 --name mongodb mongo:7.0
-
-# 4. Run the development server
-npm run dev
-
-# 5. Initialize demo data
-curl -X POST http://localhost:3000/api/init
-```
+### 🏫 School Management
+- **Teacher Dashboard**: Review flagged submissions, manage class rosters.
+- **Impact Reports**: Track total waste saved, trees planted, and energy conserved.
 
 ---
 
-## 🏗️ Tech Stack
+## 🏗️ System Architecture
 
-<table>
-<tr>
-<td width="33%">
+The system follows a modern **Microservices** pattern, separating the interactive Next.js frontend from the heavy Python AI processing layer.
 
-### 🎨 **Frontend**
-- **Next.js 14** - React framework
-- **TypeScript** - Type-safe development
-- **Tailwind CSS** - Utility-first styling
-- **Radix UI** - Accessible components
-- **Lucide React** - Beautiful icons
+![System Architecture Diagram](assets/system%20design.png)
 
-</td>
-<td width="33%">
-
-### ⚙️ **Backend**
-- **Next.js API Routes** - Serverless endpoints
-- **MongoDB** - NoSQL database
-- **Mongoose** - Object modeling
-- **MinIO** - Object storage
-- **OpenRouter API** - AI chat
-
-</td>
-<td width="33%">
-
-### 🚀 **DevOps**
-- **Docker** - Containerization
-- **Coolify** - Self-hosted platform
-- **Vercel Analytics** - Monitoring
-
-</td>
-</tr>
-</table>
-
+**Core Components:**
+-   **Frontend**: Next.js 14 (App Router) for a responsive student/teacher interface.
+-   **Backend API**: Next.js API Routes handling business logic and auth.
+-   **AI Service**: FastAPI (Python) service dedicated to image processing.
+-   **Storage**: MongoDB (Data) and MinIO (Images).
 
 ---
 
-## 🎮 User Roles & Features
+## 🗄️ Database Schema
 
-<table>
-<tr>
-<td width="33%">
+Our data model is designed for scalability and quick retrieval of user progress and gamification stats.
 
-### 👨‍🎓 **Students**
-- Complete interactive lessons
-- Submit eco-action tasks
-- Track progress & achievements
-- Compete on leaderboards
-- Chat with AI assistant
+![Database ER Diagram](assets/database-schema.png)
 
-</td>
-<td width="33%">
-
-### 👩‍🏫 **Teachers**
-- Create & manage eco-tasks
-- Monitor student progress
-- Access analytics & reports
-- Manage classroom activities
-- Verify submissions
-
-</td>
-<td width="33%">
-
-### 👨‍💼 **Administrators**
-- School management
-- Global statistics
-- System configuration
-- Data export tools
-
-</td>
-</tr>
-</table>
-
-## 👥 Team
-
-<div align="center">
-
-**EcoCred** was made possible by our dedicated team:
-
-**Sudheer Bhuvana** • **Praveen Kanaparthy** • **Nischal Singana** • **Kushaal Nayak** • **Sindhuja** • **Sai Nandhan**
-
-</div>
-
-<div align="center">
-
-### 🌍 **Making Environmental Education Engaging, Measurable, and Impactful**
-
-[![Live Demo](https://img.shields.io/badge/🌐https://ecocred.sudheerbhuvana.in/-00B15D?style=for-the-badge)](https://ecocred.sudheerbhuvana.in/)
+**Key Entities:**
+-   **Users**: Stores profiles, roles, and point balances.
+-   **Tasks**: Defines eco-activities and their point values.
+-   **Submissions**: Links users to tasks with evidence and verification status.
+-   **Badges**: Achievement criteria and metadata.
 
 ---
 
-**Made with ❤️ by the EcoCred Team**
+## 🔄 User Workflows
 
-</div>
+### 1. User Login Flow
+Secure authentication process using custom JWT-based session management.
+![Login Flow](assets/login-flow.png)
+
+### 2. Forgot Password Flow
+Secure password recovery using OTP via email.
+![Forgot Password Flow](assets/forgot-password-flow.png)
+
+### 3. Gamification Logic
+The core loop of the application: Task -> Submission -> Verification -> Reward.
+![Gamification Flow](assets/gamification-flow.png)
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+-   **Framework**: Next.js 14
+-   **Styling**: Tailwind CSS, Shadcn UI
+-   **Motion**: Framer Motion, GSAP
+
+### Backend
+-   **Runtime**: Node.js
+-   **Database**: MongoDB Atlas
+-   **Storage**: MinIO (S3 Compatible)
+
+### AI Service
+-   **Framework**: FastAPI
+-   **ML Models**: YOLOv8, ResNet50
+-   **Libraries**: PyTorch, Pillow, NumPy
+
+---
+
+## 🔌 API Reference
+
+We provide a RESTful API for all platform capabilities.
+
+-   **Base URL**: `http://localhost:3000/api`
+-   **AI Service**: `http://localhost:8000`
+
+For full endpoint details, see **[API_DOCUMENTATION.md](./API_DOCUMENTATION.md)**.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+-   Node.js v18+
+-   Python 3.9+
+-   MongoDB
+
+### Installation
+
+1.  **Clone the Repository**
+    ```bash
+    git clone https://github.com/your-org/ecocred.git
+    cd ecocred
+    ```
+
+2.  **Frontend Setup**
+    ```bash
+    npm install --legacy-peer-deps
+    cp .env.example .env.local
+    # Configure MONGODB_URI and MINIO keys
+    npm run dev
+    ```
+
+3.  **AI Service Setup**
+    ```bash
+    cd backend
+    python -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
+    uvicorn main:app --reload --port 8000
+    ```
+
+---
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+**Built with 💚 for the Planet.**
