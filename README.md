@@ -67,8 +67,6 @@ The system follows a modern **Microservices** pattern, separating the interactiv
 
 Our data model is designed for scalability and quick retrieval of user progress and gamification stats.
 
-![Database ER Diagram](assets/database-schema.png)
-
 **Key Entities:**
 -   **Users**: Stores profiles, roles, and point balances.
 -   **Tasks**: Defines eco-activities and their point values.
@@ -79,17 +77,15 @@ Our data model is designed for scalability and quick retrieval of user progress 
 
 ## 🔄 User Workflows
 
-### 1. User Login Flow
-Secure authentication process using custom JWT-based session management.
-![Login Flow](assets/login-flow.png)
+We have generated detailed UML diagrams to visualize the system structure and flows. You can find the source files in the `assets/` folder.
 
-### 2. Forgot Password Flow
-Secure password recovery using OTP via email.
-![Forgot Password Flow](assets/forgot-password-flow.png)
-
-### 3. Gamification Logic
-The core loop of the application: Task -> Submission -> Verification -> Reward.
-![Gamification Flow](assets/gamification-flow.png)
+| Diagram | Description | View |
+| :--- | :--- | :--- |
+| **System Architecture** | High-level components and data flow. | ![System Architecture](assets/system-architecture.png) |
+| **Database Schema** | Entity relationships (User, Task, Submission). | ![Database Schema](assets/database-schema.png) |
+| **User Login Flow** | Step-by-step authentication process. | ![Login Flow](assets/login-flow.png) |
+| **Forgot Password** | Password recovery sequence. | ![Forgot Password](assets/forgot-password-flow.png) |
+| **Gamification Flow** | From task selection to badge rewards. | ![Gamification](assets/gamification-flow.png)
 
 ---
 
