@@ -54,8 +54,12 @@ export function LoginForm() {
         return
       }
 
-      // In a real app, you'd verify the password hash
-      // For demo purposes, we'll accept any password
+      // Verify password
+      if (user.password && user.password !== password) {
+        setError("Invalid password. Please try again.")
+        return
+      }
+
       setCurrentUser(user)
 
       // Redirect based on role
@@ -130,6 +134,16 @@ export function LoginForm() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Signing in..." : "Sign In as Student"}
               </Button>
+              <div className="text-right">
+                <Button
+                  type="button"
+                  variant="link"
+                  className="p-0 h-auto font-normal text-sm text-muted-foreground"
+                  onClick={() => router.push("/forgot-password")}
+                >
+                  Forgot Password?
+                </Button>
+              </div>
             </form>
           </TabsContent>
 
@@ -165,6 +179,16 @@ export function LoginForm() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Signing in..." : "Sign In as Teacher"}
               </Button>
+              <div className="text-right">
+                <Button
+                  type="button"
+                  variant="link"
+                  className="p-0 h-auto font-normal text-sm text-muted-foreground"
+                  onClick={() => router.push("/forgot-password")}
+                >
+                  Forgot Password?
+                </Button>
+              </div>
             </form>
           </TabsContent>
 

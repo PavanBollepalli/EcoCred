@@ -17,6 +17,8 @@ export interface User {
   level?: number
   createdAt?: string
   lastActive?: string
+  password?: string
+  locality?: string
 }
 
 export interface School {

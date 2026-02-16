@@ -21,6 +21,8 @@ export interface User {
   lastActive?: string
   lastLogin?: string // ISO timestamp of last login
   lastDailyReward?: string // YYYY-MM-DD format for daily reward tracking
+  password?: string // hashed password
+  locality?: string // city/locality
 }
 
 export interface Task {

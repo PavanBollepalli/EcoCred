@@ -10,36 +10,10 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getUsers, getUserByEmail, saveUser, setCurrentUser, getSchools } from "@/lib/storage-api"
 import type { User } from "@/lib/storage-api"
 import { GraduationCap, UserIcon } from "lucide-react"
 import { SchoolSelect } from "@/components/school-select"
-
-// Schools are now loaded dynamically from the database via SchoolSelect component
-
-const LOCALITIES = [
-  "Amritsar",
-  "Ludhiana",
-  "Jalandhar",
-  "Patiala",
-  "Bathinda",
-  "Mohali",
-  "Chandigarh",
-  "Firozpur",
-  "Hoshiarpur",
-  "Kapurthala",
-  "Mansa",
-  "Moga",
-  "Pathankot",
-  "Rupnagar",
-  "Sangrur",
-  "Shaheed Bhagat Singh Nagar",
-  "Sri Muktsar Sahib",
-  "Tarn Taran",
-  "Fazilka",
-  "Barnala",
-]
 
 export function SignupForm() {
   const [formData, setFormData] = useState({
@@ -69,10 +43,10 @@ export function SignupForm() {
     })
   }
 
-  const handleLocalityChange = (value: string) => {
+  const handleLocalityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
-      locality: value,
+      locality: e.target.value,
     })
   }
 
@@ -123,6 +97,8 @@ export function SignupForm() {
         joinedAt: new Date().toISOString(),
         completedLessons: [],
         lessonProgress: {},
+        password: formData.password,
+        locality: formData.locality,
       }
 
       // Save user and set as current
@@ -198,18 +174,15 @@ export function SignupForm() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="locality">Locality/City</Label>
-                <Select onValueChange={handleLocalityChange} required>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select your city" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LOCALITIES.map((locality) => (
-                      <SelectItem key={locality} value={locality}>
-                        {locality}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="locality"
+                  name="locality"
+                  type="text"
+                  placeholder="Enter your city (e.g., Mumbai, New York, London)"
+                  value={formData.locality}
+                  onChange={handleLocalityChange}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
