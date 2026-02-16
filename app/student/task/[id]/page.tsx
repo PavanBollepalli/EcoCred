@@ -93,6 +93,10 @@ function TaskSubmission() {
       let reasoning = ""
 
       try {
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // OPTION A (ACTIVE): OpenAI GPT-4o-mini via OpenRouter
+        // Uses cloud-based vision model — requires OPENROUTER_API_KEY
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         const analysisResponse = await fetch('/api/analyze-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -111,6 +115,48 @@ function TaskSubmission() {
           reasoning = analysisData.analysis.reasoning || ""
           setAiAnalysis(analysisData.analysis)
         }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // OPTION B (COMMENTED OUT): YOLOv8 + ResNet50 local backend
+        // Uses local Python FastAPI backend on port 8000
+        // To switch: comment out OPTION A above, uncomment OPTION B below
+        // Requires: cd backend && python main.py  (runs on localhost:8000)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //
+        // Convert the image to base64 for the YOLO backend
+        // const imageResponse = await fetch(evidenceImage)
+        // const imageBlob = await imageResponse.blob()
+        // const imageBase64 = await new Promise<string>((resolve) => {
+        //   const reader = new FileReader()
+        //   reader.onloadend = () => resolve(reader.result as string)
+        //   reader.readAsDataURL(imageBlob)
+        // })
+        
+        // const analysisResponse = await fetch('/api/vision/analyze', {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json' },
+        //   body: JSON.stringify({
+        //     image: imageBase64,        // base64-encoded image
+        //     category: task.category,   // "planting" | "waste" | "energy" | "water"
+        //   })
+        // })
+        
+        // const analysisData = await analysisResponse.json()
+        
+        // if (analysisData.success) {
+        //   mlConfidence = analysisData.relevanceScore           // 0-100 score
+        //   detectedObjects = analysisData.detectedObjects?.map(
+        //     (obj: { name: string; confidence: number }) =>
+        //       `${obj.name} (${(obj.confidence * 100).toFixed(0)}%)`
+        //   ) || []
+        //   reasoning = analysisData.reasoning || ""
+        //   setAiAnalysis({
+        //     relevanceScore: analysisData.relevanceScore,
+        //     detectedObjects,
+        //     reasoning: analysisData.reasoning,
+        //   })
+        // }
+        
       } catch (analysisError) {
         console.error('AI analysis error:', analysisError)
         // Continue without AI analysis - teacher can still review
