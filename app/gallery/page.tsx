@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Navigation } from "@/components/navigation"
 import { AuthGuard } from "@/components/auth/auth-guard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -87,6 +87,11 @@ function GalleryView() {
         imagesResponseData: imagesResponse
       })
 
+      // Build lookup maps for O(1) access instead of O(n) .find() per image
+      const taskMap = new Map(tasks.map(t => [t.id, t]))
+      const userMap = new Map(users.map(u => [u.id, u]))
+      const submissionByEvidence = new Map(submissions.map(s => [s.evidence, s]))
+
       // Create gallery images from both imageUploads and submissions with evidence
       const galleryImages: GalleryImage[] = []
       
@@ -94,9 +99,9 @@ function GalleryView() {
       imagesResponse
         .filter((image: any) => image.isPublic)
         .forEach((image: any) => {
-          const submission = submissions.find(s => s.evidence === image.url)
-          const task = tasks.find(t => t.id === image.taskId || (submission && t.id === submission.taskId))
-          const user = users.find(u => u.id === image.uploadedBy || (submission && u.id === submission.studentId))
+          const submission = submissionByEvidence.get(image.url)
+          const task = taskMap.get(image.taskId) || (submission ? taskMap.get(submission.taskId) : undefined)
+          const user = userMap.get(image.uploadedBy) || (submission ? userMap.get(submission.studentId) : undefined)
           
           galleryImages.push({
             id: image.id,
@@ -115,16 +120,14 @@ function GalleryView() {
         })
 
       // Add images from submissions that have evidence (image URLs)
+      const addedUrls = new Set(galleryImages.map(img => img.url))
       submissions
         .filter(submission => submission.evidence && submission.status === 'approved')
         .forEach(submission => {
-          const task = tasks.find(t => t.id === submission.taskId)
-          const user = users.find(u => u.id === submission.studentId)
+          const task = taskMap.get(submission.taskId)
+          const user = userMap.get(submission.studentId)
           
-          // Check if this image is already added from imageUploads
-          const alreadyExists = galleryImages.some(img => img.url === submission.evidence)
-          
-          if (!alreadyExists && task) {
+          if (!addedUrls.has(submission.evidence) && task) {
             galleryImages.push({
               id: submission.id,
               url: submission.evidence,
@@ -245,6 +248,14 @@ function GalleryView() {
     }
   }
 
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { planting: 0, waste: 0, energy: 0, water: 0 }
+    for (const img of images) {
+      if (img.category in counts) counts[img.category]++
+    }
+    return counts
+  }, [images])
+
   const categories = [
     { value: 'all', label: 'All Categories' },
     { value: 'planting', label: 'Planting' },
@@ -304,7 +315,7 @@ function GalleryView() {
                 <TreePine className="h-8 w-8 text-green-600" />
                 <div>
                   <p className="text-2xl font-bold">
-                    {images.filter(img => img.category === 'planting').length}
+                    {categoryCounts.planting}
                   </p>
                   <p className="text-sm text-muted-foreground">Planting Tasks</p>
                 </div>
@@ -318,7 +329,7 @@ function GalleryView() {
                 <Recycle className="h-8 w-8 text-blue-600" />
                 <div>
                   <p className="text-2xl font-bold">
-                    {images.filter(img => img.category === 'waste').length}
+                    {categoryCounts.waste}
                   </p>
                   <p className="text-sm text-muted-foreground">Waste Management</p>
                 </div>
@@ -332,7 +343,7 @@ function GalleryView() {
                 <Zap className="h-8 w-8 text-yellow-600" />
                 <div>
                   <p className="text-2xl font-bold">
-                    {images.filter(img => img.category === 'energy' || img.category === 'water').length}
+                    {categoryCounts.energy + categoryCounts.water}
                   </p>
                   <p className="text-sm text-muted-foreground">Conservation</p>
                 </div>

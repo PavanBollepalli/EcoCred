@@ -46,17 +46,27 @@ export function SchoolDataList() {
       ])
 
       const schoolsData: SchoolData[] = schools.map(school => {
-        const schoolUsers = users.filter(user => user.school === school.name)
-        const students = schoolUsers.filter(user => user.role === "student")
-        const teachers = schoolUsers.filter(user => user.role === "teacher")
-        const totalPoints = schoolUsers.reduce((sum, user) => sum + user.ecoPoints, 0)
-        const averagePoints = schoolUsers.length > 0 ? Math.round(totalPoints / schoolUsers.length) : 0
+        const students: UserType[] = []
+        const teachers: UserType[] = []
+        let totalPoints = 0
+
+        // Single pass through users for this school
+        for (const user of users) {
+          if (user.school === school.name) {
+            totalPoints += user.ecoPoints
+            if (user.role === "student") students.push(user)
+            else if (user.role === "teacher") teachers.push(user)
+          }
+        }
+
+        const totalUsers = students.length + teachers.length
+        const averagePoints = totalUsers > 0 ? Math.round(totalPoints / totalUsers) : 0
 
         return {
           school,
           students,
           teachers,
-          totalUsers: schoolUsers.length,
+          totalUsers,
           totalPoints,
           averagePoints
         }

@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
     saveGameCompletion,
     hasCompletedGame,
-    getUsers,
+    getCurrentUser,
     saveUser,
     addPointsLedgerEntry,
     logEvent,
-    getBadges,
+    getBadgeByName,
     saveBadge
 } from '@/lib/database'
 import type { GameCompletion } from '@/lib/types'
@@ -80,8 +80,7 @@ export async function POST(request: NextRequest) {
         await saveGameCompletion(completion)
 
         // Update user points
-        const users = await getUsers()
-        const user = users.find(u => u.id === userId)
+        const user = await getCurrentUser(userId)
         if (!user) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 })
         }
@@ -107,8 +106,7 @@ export async function POST(request: NextRequest) {
 
         // Award badge
         let badgeAwarded = false
-        const badges = await getBadges()
-        let badge = badges.find(b => b.name === game.badgeName)
+        let badge = await getBadgeByName(game.badgeName)
 
         if (!badge) {
             // Create the badge with a deterministic ID based on game

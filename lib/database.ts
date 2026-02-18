@@ -780,6 +780,20 @@ export async function getBadgeById(id: string): Promise<Badge | null> {
   }
 }
 
+export async function getBadgeByName(name: string): Promise<Badge | null> {
+  try {
+    const db = await getDatabase()
+    const badge = await db.collection<Badge>('badges').findOne({ name })
+    if (badge) {
+      return { ...badge, _id: undefined }
+    }
+    return null
+  } catch (error) {
+    console.error('Error fetching badge by name:', error)
+    return null
+  }
+}
+
 export async function saveBadge(badge: Badge): Promise<void> {
   try {
     const db = await getDatabase()

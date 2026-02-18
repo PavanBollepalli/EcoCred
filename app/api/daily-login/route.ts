@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUsers, saveUser, addPointsLedgerEntry, logEvent } from '@/lib/database'
+import { getCurrentUser, saveUser, addPointsLedgerEntry, logEvent } from '@/lib/database'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,8 +14,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Get user
-        const users = await getUsers()
-        const user = users.find(u => u.id === userId)
+        const user = await getCurrentUser(userId)
 
         if (!user) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 })
