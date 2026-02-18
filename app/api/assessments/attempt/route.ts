@@ -3,11 +3,11 @@ import {
     saveAssessmentAttempt,
     getAssessmentById,
     hasCompletedAssessment,
-    getUsers,
+    getCurrentUser,
     saveUser,
     addPointsLedgerEntry,
     logEvent,
-    getBadges,
+    getBadgeByName,
     saveBadge,
     getAssessmentAttempts,
     getAssessmentAttemptsByAssessmentId
@@ -109,16 +109,11 @@ export async function POST(request: NextRequest) {
             await saveAssessmentAttempt(attempt)
 
             // Get user for updates
-            const users = await getUsers()
-            const user = users.find(u => u.id === userId)
+            const user = await getCurrentUser(userId)
 
             if (!user) {
                 return NextResponse.json({ error: 'User not found' }, { status: 404 })
             }
-
-            // Update user points
-            user.ecoPoints += pointsEarned
-            await saveUser(user)
 
             // Add points ledger entry
             await addPointsLedgerEntry({
@@ -136,8 +131,7 @@ export async function POST(request: NextRequest) {
 
             // Award badge
             let badgeAwarded = false
-            const badges = await getBadges()
-            let badge = badges.find(b => b.name === assessment.badgeName)
+            let badge = await getBadgeByName(assessment.badgeName)
 
             if (!badge) {
                 // Create the badge

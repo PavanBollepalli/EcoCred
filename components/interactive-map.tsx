@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -38,10 +38,15 @@ export function InteractiveMap() {
         
         const approvedSubmissions = submissions.filter((s) => s.status === "approved")
 
+        // Build lookup maps for O(1) access instead of O(n) .find() per submission
+        const taskMap = new Map(tasks.map((t) => [t.id, t]))
+        const userMap = new Map(users.map((u) => [u.id, u]))
+        const schoolMap = new Map(schools.map((s) => [s.name, s]))
+
         const points: MapPoint[] = approvedSubmissions.map((submission, index) => {
-          const task = tasks.find((t) => t.id === submission.taskId)
-          const user = users.find((u) => u.id === submission.studentId)
-          const school = schools.find((s) => s.name === user?.school)
+          const task = taskMap.get(submission.taskId)
+          const user = userMap.get(submission.studentId)
+          const school = user?.school ? schoolMap.get(user.school) : undefined
 
           // Use school location if available, otherwise use Indian cities as fallback
           const indianCities = [
@@ -100,6 +105,14 @@ export function InteractiveMap() {
 
   const filteredPoints = filter === "all" ? mapPoints : mapPoints.filter((p) => p.type === filter)
 
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { planting: 0, waste: 0, energy: 0, water: 0 }
+    for (const p of mapPoints) {
+      if (p.type in counts) counts[p.type]++
+    }
+    return counts
+  }, [mapPoints])
+
   const getIconForType = (type: string) => {
     switch (type) {
       case "planting":
@@ -150,7 +163,7 @@ export function InteractiveMap() {
           className="flex items-center space-x-2"
         >
           <TreePine className="h-4 w-4" />
-          <span>Planting ({mapPoints.filter((p) => p.type === "planting").length})</span>
+          <span>Planting ({categoryCounts.planting})</span>
         </Button>
         <Button
           variant={filter === "waste" ? "default" : "outline"}
@@ -159,7 +172,7 @@ export function InteractiveMap() {
           className="flex items-center space-x-2"
         >
           <Recycle className="h-4 w-4" />
-          <span>Waste ({mapPoints.filter((p) => p.type === "waste").length})</span>
+          <span>Waste ({categoryCounts.waste})</span>
         </Button>
         <Button
           variant={filter === "energy" ? "default" : "outline"}
@@ -168,7 +181,7 @@ export function InteractiveMap() {
           className="flex items-center space-x-2"
         >
           <Zap className="h-4 w-4" />
-          <span>Energy ({mapPoints.filter((p) => p.type === "energy").length})</span>
+          <span>Energy ({categoryCounts.energy})</span>
         </Button>
         <Button
           variant={filter === "water" ? "default" : "outline"}
@@ -177,7 +190,7 @@ export function InteractiveMap() {
           className="flex items-center space-x-2"
         >
           <Droplets className="h-4 w-4" />
-          <span>Water ({mapPoints.filter((p) => p.type === "water").length})</span>
+          <span>Water ({categoryCounts.water})</span>
         </Button>
       </div>
 
