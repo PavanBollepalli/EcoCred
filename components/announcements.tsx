@@ -19,7 +19,7 @@ import {
   CheckCircle,
   X
 } from "lucide-react"
-import { getAnnouncements, createAnnouncement, getCurrentUserFromSession } from "@/lib/storage-api"
+import { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement, getCurrentUserFromSession } from "@/lib/storage-api"
 import type { Announcement } from "@/lib/types"
 
 interface AnnouncementsProps {
@@ -33,6 +33,7 @@ export function Announcements({ schoolId, targetAudience, showAddButton = true, 
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null)
 
   const loadAnnouncements = useCallback(async () => {
     try {
@@ -56,6 +57,27 @@ export function Announcements({ schoolId, targetAudience, showAddButton = true, 
       setShowForm(false)
     } catch (error) {
       console.error('Error creating announcement:', error)
+    }
+  }
+
+  const handleUpdateAnnouncement = async (announcementData: Omit<Announcement, 'id'>) => {
+    if (!editingAnnouncement) return
+    try {
+      await updateAnnouncement(editingAnnouncement.id, announcementData)
+      await loadAnnouncements()
+      setEditingAnnouncement(null)
+    } catch (error) {
+      console.error('Error updating announcement:', error)
+    }
+  }
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this announcement?')) return
+    try {
+      await deleteAnnouncement(id)
+      setAnnouncements((prev) => prev.filter((a) => a.id !== id))
+    } catch (error) {
+      console.error('Error deleting announcement:', error)
     }
   }
 
@@ -182,10 +204,10 @@ export function Announcements({ schoolId, targetAudience, showAddButton = true, 
                   
                   {showAddButton && (userRole === 'teacher' || userRole === 'admin') && (
                     <div className="flex space-x-2 ml-4">
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => setEditingAnnouncement(announcement)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteAnnouncement(announcement.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -207,6 +229,18 @@ export function Announcements({ schoolId, targetAudience, showAddButton = true, 
           userRole={userRole}
         />
       )}
+
+      {/* Edit Announcement Modal */}
+      {editingAnnouncement && (
+        <AnnouncementForm
+          onSave={handleUpdateAnnouncement}
+          onCancel={() => setEditingAnnouncement(null)}
+          schoolId={schoolId}
+          targetAudience={targetAudience}
+          userRole={userRole}
+          initialData={editingAnnouncement}
+        />
+      )}
     </div>
   )
 }
@@ -217,25 +251,27 @@ function AnnouncementForm({
   onCancel, 
   schoolId,
   targetAudience,
-  userRole
+  userRole,
+  initialData
 }: { 
   onSave: (data: Omit<Announcement, 'id'>) => void
   onCancel: () => void
   schoolId?: string
   targetAudience?: string
   userRole?: string
+  initialData?: Announcement
 }) {
   const currentUser = getCurrentUserFromSession()
   const [formData, setFormData] = useState({
-    title: '',
-    message: '',
-    authorId: currentUser?.id || 'admin',
-    authorName: currentUser?.name || 'Admin',
-    schoolId: schoolId || '',
-    targetAudience: targetAudience || 'all' as Announcement['targetAudience'],
-    priority: 'medium' as Announcement['priority'],
-    isActive: true,
-    expiresAt: ''
+    title: initialData?.title || '',
+    message: initialData?.message || '',
+    authorId: initialData?.authorId || currentUser?.id || 'admin',
+    authorName: initialData?.authorName || currentUser?.name || 'Admin',
+    schoolId: initialData?.schoolId || schoolId || '',
+    targetAudience: initialData?.targetAudience || targetAudience || 'all' as Announcement['targetAudience'],
+    priority: initialData?.priority || 'medium' as Announcement['priority'],
+    isActive: initialData?.isActive ?? true,
+    expiresAt: initialData?.expiresAt ? new Date(initialData.expiresAt).toISOString().split('T')[0] : ''
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -255,7 +291,7 @@ function AnnouncementForm({
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Megaphone className="h-5 w-5 text-blue-500" />
-            <span>Create Announcement</span>
+            <span>{initialData ? 'Edit Announcement' : 'Create Announcement'}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -340,7 +376,7 @@ function AnnouncementForm({
 
             <div className="flex space-x-2">
               <Button type="submit" className="flex-1">
-                Publish Announcement
+                {initialData ? 'Save Changes' : 'Publish Announcement'}
               </Button>
               <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
                 Cancel

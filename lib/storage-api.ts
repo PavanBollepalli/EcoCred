@@ -506,6 +506,29 @@ export const createAnnouncement = async (announcementData: any): Promise<void> =
   }
 }
 
+export const updateAnnouncement = async (id: string, updates: any): Promise<any> => {
+  try {
+    return await apiCall(`/api/announcements/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    })
+  } catch (error) {
+    console.error('Error updating announcement:', error)
+    throw error
+  }
+}
+
+export const deleteAnnouncement = async (id: string): Promise<void> => {
+  try {
+    await apiCall(`/api/announcements/${id}`, {
+      method: 'DELETE',
+    })
+  } catch (error) {
+    console.error('Error deleting announcement:', error)
+    throw error
+  }
+}
+
 // Image management
 export const getImages = async (filters?: {
   uploadedBy?: string

@@ -601,6 +601,37 @@ export async function createAnnouncement(announcementData: Omit<Announcement, 'i
   }
 }
 
+export async function updateAnnouncement(id: string, updates: Partial<Omit<Announcement, 'id'>>): Promise<Announcement> {
+  try {
+    const db = await getDatabase()
+    const result = await db.collection<Announcement>('announcements').findOneAndUpdate(
+      { id },
+      { $set: updates },
+      { returnDocument: 'after' }
+    )
+    if (!result) {
+      throw new Error('Announcement not found')
+    }
+    return result as Announcement
+  } catch (error) {
+    console.error('Error updating announcement:', error)
+    throw error
+  }
+}
+
+export async function deleteAnnouncement(id: string): Promise<void> {
+  try {
+    const db = await getDatabase()
+    const result = await db.collection<Announcement>('announcements').deleteOne({ id })
+    if (result.deletedCount === 0) {
+      throw new Error('Announcement not found')
+    }
+  } catch (error) {
+    console.error('Error deleting announcement:', error)
+    throw error
+  }
+}
+
 // Image management
 export async function saveImageUpload(imageData: Omit<ImageUpload, 'id'>): Promise<ImageUpload> {
   try {
