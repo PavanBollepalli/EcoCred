@@ -7,6 +7,8 @@ export const dynamic = 'force-dynamic'
 interface AnalysisResult {
     detectedObjects: string[]
     relevanceScore: number
+    isInternetImage?: boolean
+    isAIGenerated?: boolean
     reasoning: string
 }
 
@@ -117,16 +119,24 @@ Your job is to analyze images submitted by students as evidence for completing e
 For this task category "${taskCategory}" (Task: "${taskTitle || 'Environmental Task'}"):
 ${categoryPrompt}
 
+IMPORTANT: You must also detect if the image is:
+1. An internet/stock image (commonly found online, stock photos, etc.)
+2. An AI-generated image (unrealistic, perfect lighting, strange artifacts, etc.)
+
 Respond ONLY with a valid JSON object in this exact format:
 {
   "detectedObjects": ["list", "of", "detected", "objects"],
   "relevanceScore": 0-100,
+  "isInternetImage": true/false,
+  "isAIGenerated": true/false,
   "reasoning": "Brief explanation of why this score was given"
 }
 
 Be fair but accurate. If the image clearly shows the environmental activity, give a high score (80-100). 
 If it's partially relevant, give a medium score (50-79).
-If it's not relevant at all, give a low score (0-49).`
+If it's not relevant at all, give a low score (0-49).
+
+If the image appears to be an internet stock photo or AI-generated, set relevanceScore to 0 regardless of content.`
 
         const payload = {
             model: "openai/gpt-4o-mini",
@@ -199,12 +209,23 @@ If it's not relevant at all, give a low score (0-49).`
             analysis = {
                 detectedObjects: ["Analysis completed"],
                 relevanceScore: 70,
-                reasoning: aiResponse.substring(0, 200) // Use first 200 chars of response as reasoning
+                reasoning: aiResponse.substring(0, 200)
             }
         }
 
-        // Ensure score is within bounds
-        analysis.relevanceScore = Math.max(0, Math.min(100, analysis.relevanceScore || 0))
+        // CRITICAL FIX: Force confidence to 0 if internet image or AI-generated
+        const isInternetImage = analysis.isInternetImage === true
+        const isAIGenerated = analysis.isAIGenerated === true
+
+        if (isInternetImage || isAIGenerated) {
+            // Override the confidence score to 0
+            analysis.relevanceScore = 0
+            analysis.reasoning = (isInternetImage ? "Internet/stock image detected. " : "AI-generated image detected. ") + analysis.reasoning
+            console.log('Image validation: Detected problematic image', { isInternetImage, isAIGenerated })
+        } else {
+            // Ensure score is within bounds for legitimate images
+            analysis.relevanceScore = Math.max(0, Math.min(100, analysis.relevanceScore || 0))
+        }
 
         return NextResponse.json({
             success: true,

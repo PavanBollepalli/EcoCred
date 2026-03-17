@@ -14,15 +14,16 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const studentId = searchParams.get('studentId')
     const taskId = searchParams.get('taskId')
+    const collegeCode = searchParams.get('collegeCode') || undefined
 
     if (studentId) {
-      const submissions = await getSubmissionsByStudent(studentId)
+      const submissions = await getSubmissionsByStudent(studentId, collegeCode)
       return NextResponse.json(submissions)
     } else if (taskId) {
-      const submissions = await getSubmissionsByTask(taskId)
+      const submissions = await getSubmissionsByTask(taskId, collegeCode)
       return NextResponse.json(submissions)
     } else {
-      const submissions = await getSubmissions()
+      const submissions = await getSubmissions(collegeCode)
       return NextResponse.json(submissions)
     }
   } catch (error) {
@@ -33,6 +34,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const submission: Submission = await request.json()
+    
+    // Validate collegeCode is present
+    if (!submission.collegeCode) {
+      return NextResponse.json({ error: 'College code is required' }, { status: 400 })
+    }
+    
     await saveSubmission(submission)
     return NextResponse.json({ success: true })
   } catch (error) {

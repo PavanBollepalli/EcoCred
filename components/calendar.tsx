@@ -23,11 +23,12 @@ import type { CalendarEvent } from "@/lib/types"
 
 interface CalendarProps {
   schoolId?: string
+  collegeCode?: string
   showAddEvent?: boolean
   userRole?: string
 }
 
-export function Calendar({ schoolId, showAddEvent = true, userRole }: CalendarProps) {
+export function Calendar({ schoolId, collegeCode, showAddEvent = true, userRole }: CalendarProps) {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [currentDate, setCurrentDate] = useState(new Date())
   const [showEventForm, setShowEventForm] = useState(false)
@@ -36,14 +37,14 @@ export function Calendar({ schoolId, showAddEvent = true, userRole }: CalendarPr
 
   const loadEvents = useCallback(async () => {
     try {
-      const calendarEvents = await getCalendarEvents(schoolId)
+      const calendarEvents = await getCalendarEvents(collegeCode, schoolId)
       setEvents(calendarEvents)
     } catch (error) {
       console.error('Error loading calendar events:', error)
     } finally {
       setLoading(false)
     }
-  }, [schoolId])
+  }, [collegeCode, schoolId])
 
   useEffect(() => {
     loadEvents()
@@ -242,6 +243,7 @@ export function Calendar({ schoolId, showAddEvent = true, userRole }: CalendarPr
           onSave={handleCreateEvent}
           onCancel={() => setShowEventForm(false)}
           schoolId={schoolId}
+          collegeCode={collegeCode}
         />
       )}
 
@@ -307,6 +309,7 @@ function EventForm({
   onSave: (data: Omit<CalendarEvent, 'id'>) => void
   onCancel: () => void
   schoolId?: string
+  collegeCode?: string
 }) {
   const [formData, setFormData] = useState({
     title: '',
@@ -323,6 +326,7 @@ function EventForm({
     onSave({
       ...formData,
       schoolId,
+      collegeCode: '', // TODO: Get from props when function params are fixed
       createdAt: new Date().toISOString(),
       startDate: new Date(formData.startDate).toISOString(),
       endDate: new Date(formData.endDate).toISOString()
@@ -412,3 +416,4 @@ function EventForm({
     </div>
   )
 }
+

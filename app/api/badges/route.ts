@@ -4,13 +4,14 @@ import type { Badge } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
-// GET - Fetch all badges or filter by schoolId
+// GET - Fetch all badges or filter by schoolId/collegeCode
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url)
         const schoolId = searchParams.get('schoolId') || undefined
+        const collegeCode = searchParams.get('collegeCode') || undefined
 
-        const badges = await getBadges(schoolId)
+        const badges = await getBadges(collegeCode, schoolId)
         return NextResponse.json(badges)
     } catch (error) {
         console.error('Error fetching badges:', error)
@@ -31,6 +32,11 @@ export async function POST(request: NextRequest) {
             )
         }
 
+        // Validate collegeCode is present for teacher-created badges
+        if (!body.collegeCode) {
+            return NextResponse.json({ error: 'College code is required' }, { status: 400 })
+        }
+
         const badge: Badge = {
             id: body.id || `badge-${Date.now()}`,
             name: body.name,
@@ -40,6 +46,7 @@ export async function POST(request: NextRequest) {
             requirement: body.requirement,
             createdBy: body.createdBy || 'system',
             schoolId: body.schoolId,
+            collegeCode: body.collegeCode,
             isActive: body.isActive !== false,
             createdAt: body.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString()

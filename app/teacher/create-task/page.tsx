@@ -92,6 +92,7 @@ function CreateTaskForm() {
         category: formData.category as "planting" | "waste" | "energy" | "water",
         points,
         createdBy: user.id,
+        collegeCode: user.collegeCode,
         createdAt: new Date().toISOString(),
       }
 

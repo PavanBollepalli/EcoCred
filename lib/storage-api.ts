@@ -7,6 +7,7 @@ export interface User {
   name: string
   role: "student" | "teacher" | "admin"
   school: string
+  collegeCode: string  // Added for multi-tenancy
   ecoPoints: number
   badges: string[]
   streak: number
@@ -38,6 +39,7 @@ export interface Task {
   category: "planting" | "waste" | "energy" | "water"
   points: number
   createdBy: string
+  collegeCode: string  // Added for multi-tenancy
   createdAt: string
 }
 
@@ -56,6 +58,7 @@ export interface Submission {
   mlConfidence?: number | null
   aiDetectedObjects?: string[]
   aiReasoning?: string
+  collegeCode?: string
 }
 
 export interface GlobalStats {
@@ -90,7 +93,7 @@ export interface Lesson {
   id: string
   title: string
   description: string
-  category: "planting" | "waste" | "energy" | "water"
+  category: "planting" | "waste" | "energy" | "water" | "aptitude" | "general"
   icon: string
   coverImage: string
   duration: string
@@ -102,6 +105,7 @@ export interface Lesson {
     quiz: QuizQuestion[]
   }
   createdBy: string
+  collegeCode?: string
   schoolId?: string
   isActive: boolean
   createdAt: string
@@ -126,9 +130,10 @@ async function apiCall(endpoint: string, options: RequestInit = {}) {
 }
 
 // User management
-export const getUsers = async (): Promise<User[]> => {
+export const getUsers = async (collegeCode?: string): Promise<User[]> => {
   try {
-    return await apiCall('/api/users')
+    const url = collegeCode ? `/api/users?collegeCode=${collegeCode}` : '/api/users'
+    return await apiCall(url)
   } catch (error) {
     console.error('Error fetching users:', error)
     return []
@@ -177,9 +182,10 @@ export const deleteUser = async (userId: string): Promise<void> => {
 }
 
 // Task management
-export const getTasks = async (): Promise<Task[]> => {
+export const getTasks = async (collegeCode?: string): Promise<Task[]> => {
   try {
-    return await apiCall('/api/tasks')
+    const url = collegeCode ? `/api/tasks?collegeCode=${collegeCode}` : '/api/tasks'
+    return await apiCall(url)
   } catch (error) {
     console.error('Error fetching tasks:', error)
     return []
@@ -208,9 +214,10 @@ export const getTaskById = async (taskId: string): Promise<Task | null> => {
 }
 
 // Submission management
-export const getSubmissions = async (): Promise<Submission[]> => {
+export const getSubmissions = async (collegeCode?: string): Promise<Submission[]> => {
   try {
-    return await apiCall('/api/submissions')
+    const url = collegeCode ? `/api/submissions?collegeCode=${collegeCode}` : '/api/submissions'
+    return await apiCall(url)
   } catch (error) {
     console.error('Error fetching submissions:', error)
     return []
@@ -413,9 +420,12 @@ export const deleteSchool = async (id: string): Promise<void> => {
 }
 
 // Calendar management
-export const getCalendarEvents = async (schoolId?: string): Promise<any[]> => {
+export const getCalendarEvents = async (collegeCode?: string, schoolId?: string): Promise<any[]> => {
   try {
-    const url = schoolId ? `/api/calendar?schoolId=${schoolId}` : '/api/calendar'
+    const params = new URLSearchParams()
+    if (collegeCode) params.append('collegeCode', collegeCode)
+    if (schoolId) params.append('schoolId', schoolId)
+    const url = `/api/calendar${params.toString() ? '?' + params.toString() : ''}`
     return await apiCall(url)
   } catch (error) {
     console.error('Error fetching calendar events:', error)
@@ -436,9 +446,10 @@ export const createCalendarEvent = async (eventData: any): Promise<void> => {
 }
 
 // Seasonal events management
-export const getSeasonalEvents = async (): Promise<any[]> => {
+export const getSeasonalEvents = async (collegeCode?: string): Promise<any[]> => {
   try {
-    return await apiCall('/api/seasonal-events')
+    const url = collegeCode ? `/api/seasonal-events?collegeCode=${collegeCode}` : '/api/seasonal-events'
+    return await apiCall(url)
   } catch (error) {
     console.error('Error fetching seasonal events:', error)
     return []
@@ -579,9 +590,12 @@ export const getSchoolRankings = async (limit: number = 5): Promise<Array<{ scho
 }
 
 // Lesson management
-export const getLessons = async (schoolId?: string): Promise<Lesson[]> => {
+export const getLessons = async (collegeCode?: string, schoolId?: string): Promise<Lesson[]> => {
   try {
-    const url = schoolId ? `/api/lessons/manage?schoolId=${schoolId}` : '/api/lessons/manage'
+    const params = new URLSearchParams()
+    if (collegeCode) params.append('collegeCode', collegeCode)
+    if (schoolId) params.append('schoolId', schoolId)
+    const url = `/api/lessons/manage${params.toString() ? '?' + params.toString() : ''}`
     return await apiCall(url)
   } catch (error) {
     console.error('Error fetching lessons:', error)
@@ -648,14 +662,18 @@ export interface Badge {
   }
   createdBy: string
   schoolId?: string
+  collegeCode?: string
   isActive: boolean
   createdAt: string
   updatedAt?: string
 }
 
-export const getBadges = async (schoolId?: string): Promise<Badge[]> => {
+export const getBadges = async (collegeCode?: string, schoolId?: string): Promise<Badge[]> => {
   try {
-    const url = schoolId ? `/api/badges?schoolId=${schoolId}` : '/api/badges'
+    const params = new URLSearchParams()
+    if (collegeCode) params.append('collegeCode', collegeCode)
+    if (schoolId) params.append('schoolId', schoolId)
+    const url = `/api/badges${params.toString() ? '?' + params.toString() : ''}`
     return await apiCall(url)
   } catch (error) {
     console.error('Error fetching badges:', error)

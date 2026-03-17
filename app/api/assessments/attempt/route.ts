@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url)
         const userId = searchParams.get('userId')
         const assessmentId = searchParams.get('assessmentId')
+        const collegeCode = searchParams.get('collegeCode') || undefined
 
         if (userId) {
             const attempts = await getAssessmentAttempts(userId)
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
-        const { userId, assessmentId, answers } = body
+        const { userId, assessmentId, answers, collegeCode } = body
 
         if (!userId || !assessmentId || !answers) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -54,8 +55,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Assessment already completed' }, { status: 400 })
         }
 
-        // Get assessment
-        const assessment = await getAssessmentById(assessmentId)
+        // Get assessment with collegeCode filtering
+        const assessment = await getAssessmentById(assessmentId, collegeCode)
         if (!assessment) {
             return NextResponse.json({ error: 'Assessment not found' }, { status: 404 })
         }

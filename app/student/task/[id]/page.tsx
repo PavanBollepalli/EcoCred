@@ -176,6 +176,7 @@ function TaskSubmission() {
         mlConfidence,
         aiDetectedObjects: detectedObjects,
         aiReasoning: reasoning,
+        collegeCode: user.collegeCode,
       }
 
       await saveSubmission(submission)

@@ -78,12 +78,15 @@ function TeacherDashboard() {
   const loadData = async () => {
     try {
       const currentUser = getCurrentUserFromSession()
-      const allTasks = await getTasks()
-      const allSubmissions = await getSubmissions()
-      const allUsers = await getUsers()
+      const collegeCode = currentUser?.collegeCode
+      
+      // Fetch all data with collegeCode filtering
+      const allTasks = await getTasks(collegeCode)
+      const allSubmissions = await getSubmissions(collegeCode)
+      const allUsers = await getUsers(collegeCode)
       const studentUsers = allUsers.filter((u) => u.role === "student")
-      const allLessons = await getLessons()
-      const allBadges = await getBadges()
+      const allLessons = await getLessons(collegeCode)
+      const allBadges = await getBadges(collegeCode)
 
       setUser(currentUser)
       setTasks(allTasks)
@@ -1247,7 +1250,7 @@ function TeacherDashboard() {
 
           {/* Events Tab */}
           <TabsContent value="events" className="space-y-6">
-            <SeasonalEvents userRole={user?.role} />
+            <SeasonalEvents userRole={user?.role} collegeCode={user?.collegeCode} />
           </TabsContent>
 
           {/* Announcements Tab */}
@@ -1257,7 +1260,7 @@ function TeacherDashboard() {
 
           {/* Calendar Tab */}
           <TabsContent value="calendar" className="space-y-6">
-            <Calendar schoolId={user?.school} showAddEvent={true} userRole={user?.role} />
+            <Calendar schoolId={user?.school} collegeCode={user?.collegeCode} showAddEvent={true} userRole={user?.role} />
           </TabsContent>
 
           {/* Assessments Tab */}

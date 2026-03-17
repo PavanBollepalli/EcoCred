@@ -108,6 +108,7 @@ function CreateBadgePage() {
                 },
                 createdBy: user?.id || 'system',
                 schoolId: user?.school,
+                collegeCode: user?.collegeCode,
                 isActive: true,
                 createdAt: new Date().toISOString()
             })

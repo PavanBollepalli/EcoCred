@@ -24,9 +24,10 @@ import type { SeasonalEvent } from "@/lib/types"
 
 interface SeasonalEventsProps {
   userRole?: string
+  collegeCode?: string
 }
 
-export function SeasonalEvents({ userRole }: SeasonalEventsProps) {
+export function SeasonalEvents({ userRole, collegeCode }: SeasonalEventsProps) {
   const [events, setEvents] = useState<SeasonalEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [showEventForm, setShowEventForm] = useState(false)
@@ -38,7 +39,7 @@ export function SeasonalEvents({ userRole }: SeasonalEventsProps) {
 
   const loadEvents = async () => {
     try {
-      const seasonalEvents = await getSeasonalEvents()
+      const seasonalEvents = await getSeasonalEvents(collegeCode)
       setEvents(seasonalEvents)
     } catch (error) {
       console.error('Error loading seasonal events:', error)
@@ -264,6 +265,7 @@ export function SeasonalEvents({ userRole }: SeasonalEventsProps) {
           event={null}
           onSave={handleCreateEvent}
           onCancel={() => setShowEventForm(false)}
+          collegeCode={collegeCode}
         />
       )}
 
@@ -273,6 +275,7 @@ export function SeasonalEvents({ userRole }: SeasonalEventsProps) {
           event={editingEvent}
           onSave={handleUpdateEvent}
           onCancel={() => setEditingEvent(null)}
+          collegeCode={collegeCode}
         />
       )}
     </div>
@@ -283,11 +286,13 @@ export function SeasonalEvents({ userRole }: SeasonalEventsProps) {
 function SeasonalEventForm({ 
   event, 
   onSave, 
-  onCancel 
+  onCancel,
+  collegeCode
 }: { 
   event: SeasonalEvent | null
   onSave: (data: Omit<SeasonalEvent, 'id'>) => void
   onCancel: () => void 
+  collegeCode?: string
 }) {
   const [formData, setFormData] = useState({
     name: event?.name || '',
@@ -309,6 +314,7 @@ function SeasonalEventForm({
     e.preventDefault()
     onSave({
       ...formData,
+      collegeCode: collegeCode || '',
       startDate: new Date(formData.startDate).toISOString(),
       endDate: new Date(formData.endDate).toISOString(),
       createdAt: event?.createdAt || new Date().toISOString()

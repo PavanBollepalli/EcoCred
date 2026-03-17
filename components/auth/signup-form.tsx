@@ -67,6 +67,15 @@ export function SignupForm() {
         return
       }
 
+      // Extract college code from email dynamically, using school name if available
+      const collegeCodeFromEmail = getCollegeCodeFromEmail(formData.email, formData.school)
+      
+      // If we couldn't derive a college code, show a warning
+      if (!collegeCodeFromEmail) {
+        setError("Could not determine college from email. Please use a valid institutional email.")
+        return
+      }
+
       // Check if user already exists
       const existingUser = await getUserByEmail(formData.email)
 
@@ -91,6 +100,7 @@ export function SignupForm() {
         name: formData.name,
         role: activeTab as "student" | "teacher",
         school: selectedSchool.name,
+        collegeCode: collegeCodeFromEmail,  // Added college code
         ecoPoints: 0,
         badges: [],
         streak: 0,
@@ -117,6 +127,34 @@ export function SignupForm() {
       setIsLoading(false)
     }
   }
+
+// Helper function to extract college code from email - dynamic based on school
+function getCollegeCodeFromEmail(email: string, schoolName?: string): string | null {
+  const domain = email.split('@')[1]?.toLowerCase()
+  
+  // If school name is provided, use it to derive college code
+  if (schoolName) {
+    const derivedCode = schoolName.toUpperCase().replace(/[^A-Z]/g, '').substring(0, 4)
+    if (derivedCode.length >= 2) {
+      return derivedCode
+    }
+  }
+  
+  // Fallback: try to extract from email domain
+  if (domain) {
+    const domainParts = domain.split('.')
+    if (domainParts.length > 0) {
+      const prefix = domainParts[0].toUpperCase()
+      const knownDomains: Record<string, string> = {
+        'vvit': 'VVIT',
+        'viva': 'VIVA',
+      }
+      return knownDomains[prefix] || prefix.substring(0, 4)
+    }
+  }
+  
+  return null
+}
 
   return (
     <Card className="w-full max-w-md mx-auto">

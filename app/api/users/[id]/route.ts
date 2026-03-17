@@ -46,7 +46,9 @@ export async function GET(
 ) {
   try {
     const userId = params.id
-    const user = await getCurrentUser(userId)
+    const { searchParams } = new URL(request.url)
+    const collegeCode = searchParams.get('collegeCode')
+    const user = await getCurrentUser(userId, collegeCode ?? undefined)
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })

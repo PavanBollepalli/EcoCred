@@ -7,6 +7,7 @@ export interface User {
   name: string
   role: "student" | "teacher" | "admin"
   school: string
+  collegeCode: string  // Added for multi-tenancy
   ecoPoints: number
   badges: string[]
   streak: number
@@ -33,6 +34,7 @@ export interface Task {
   category: "planting" | "waste" | "energy" | "water"
   points: number
   createdBy: string
+  collegeCode: string  // Added for multi-tenancy
   createdAt: string
 }
 
@@ -41,6 +43,7 @@ export interface Submission {
   id: string
   taskId: string
   studentId: string
+  collegeCode: string  // Added for multi-tenancy
   evidence: string
   location?: string
   description?: string
@@ -92,6 +95,7 @@ export interface CalendarEvent {
   type: "deadline" | "event" | "holiday" | "seasonal"
   isAllDay: boolean
   schoolId?: string
+  collegeCode: string  // Added for multi-tenancy
   createdBy: string
   createdAt: string
 }
@@ -109,6 +113,7 @@ export interface SeasonalEvent {
     specialItems: string[]
   }
   isActive: boolean
+  collegeCode: string  // Added for multi-tenancy
   createdAt: string
 }
 
@@ -163,7 +168,8 @@ export interface Lesson {
   id: string
   title: string
   description: string
-  category: "planting" | "waste" | "energy" | "water"
+  category: "planting" | "waste" | "energy" | "water" | "aptitude" | "general"
+  collegeCode: string  // Added for multi-tenancy
   icon: string  // Icon name as string for serialization (e.g., "TreePine", "Recycle")
   coverImage: string
   duration: string
@@ -201,6 +207,7 @@ export interface Badge {
   requirement: BadgeRequirement
   createdBy: string
   schoolId?: string
+  collegeCode?: string  // Added for multi-tenancy
   isActive: boolean
   createdAt: string
   updatedAt?: string
@@ -219,7 +226,7 @@ export interface PointsLedgerEntry {
   id: string
   userId: string
   points: number
-  source: 'daily_login' | 'game' | 'assessment' | 'task' | 'lesson'
+  source: 'daily_login' | 'game' | 'assessment' | 'task' | 'lesson' | 'admin_adjustment'
   sourceId?: string // ID of the task, game, assessment, or lesson
   timestamp: string
   metadata?: Record<string, any>
@@ -243,6 +250,7 @@ export interface Assessment {
   topic: string
   description: string
   category: "planting" | "waste" | "energy" | "water"
+  collegeCode: string  // Added for multi-tenancy
   questions: AssessmentQuestion[]
   totalPoints: number
   badgeName: string // Badge awarded on completion

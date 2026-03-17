@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getUsers, getUserByEmail, setCurrentUser } from "@/lib/storage-api"
+import { getUsers, getUserByEmail, setCurrentUser, claimDailyReward } from "@/lib/storage-api"
 import { GraduationCap, User, Settings } from "lucide-react"
+import { DailyLoginReward } from "@/components/celebrations/daily-login-reward"
 
 export function LoginForm() {
   const [email, setEmail] = useState("")
@@ -19,6 +20,7 @@ export function LoginForm() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState("student")
+  const [dailyReward, setDailyReward] = useState<{ awarded: boolean; points: number; newTotal?: number } | null>(null)
   const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -35,6 +37,7 @@ export function LoginForm() {
           name: "System Admin",
           role: "admin" as const,
           school: "EcoCred Platform",
+          collegeCode: "VVIT", // Admin uses VVIT college code
           ecoPoints: 0,
           badges: [],
           streak: 0,
@@ -47,10 +50,25 @@ export function LoginForm() {
         return
       }
 
+      // Extract college code from email dynamically
+      const collegeCodeFromEmail = getCollegeCodeFromEmail(email)
+      
+      // If we couldn't derive a college code, show a warning but allow login
+      if (!collegeCodeFromEmail) {
+        setError("Could not determine college from email. Please contact administrator.")
+        return
+      }
+
       const user = await getUserByEmail(email)
 
       if (!user || user.role !== activeTab) {
         setError("Invalid email or user type. Please check your credentials.")
+        return
+      }
+
+      // Validate college code matches email domain
+      if (user.collegeCode !== collegeCodeFromEmail) {
+        setError("College code mismatch. Please check your email domain.")
         return
       }
 
@@ -61,6 +79,22 @@ export function LoginForm() {
       }
 
       setCurrentUser(user)
+
+      // Check and award daily login reward for students
+      if (user.role === "student") {
+        try {
+          const rewardResult = await claimDailyReward(user.id)
+          if (rewardResult.awarded) {
+            setDailyReward({
+              awarded: true,
+              points: rewardResult.points,
+              newTotal: rewardResult.newTotal
+            })
+          }
+        } catch (err) {
+          console.error("Failed to claim daily reward:", err)
+        }
+      }
 
       // Redirect based on role
       if (user.role === "student") {
@@ -78,6 +112,34 @@ export function LoginForm() {
       setIsLoading(false)
     }
   }
+
+// Helper function to extract college code from email - dynamic based on school
+function getCollegeCodeFromEmail(email: string, schoolName?: string): string | null {
+  const domain = email.split('@')[1]?.toLowerCase()
+  
+  // If school name is provided, use it to derive college code
+  if (schoolName) {
+    const derivedCode = schoolName.toUpperCase().replace(/[^A-Z]/g, '').substring(0, 4)
+    if (derivedCode.length >= 2) {
+      return derivedCode
+    }
+  }
+  
+  // Fallback: try to extract from email domain
+  if (domain) {
+    const domainParts = domain.split('.')
+    if (domainParts.length > 0) {
+      const prefix = domainParts[0].toUpperCase()
+      const knownDomains: Record<string, string> = {
+        'vvit': 'VVIT',
+        'viva': 'VIVA',
+      }
+      return knownDomains[prefix] || prefix.substring(0, 4)
+    }
+  }
+  
+  return null
+}
 
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -239,6 +301,14 @@ export function LoginForm() {
           </p>
         </div>
       </CardContent>
+      {dailyReward && (
+        <DailyLoginReward
+          isOpen={dailyReward.awarded}
+          points={dailyReward.points}
+          streak={1}
+          onClose={() => setDailyReward(null)}
+        />
+      )}
     </Card>
   )
 }

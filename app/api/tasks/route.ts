@@ -8,12 +8,13 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const taskId = searchParams.get('taskId')
+    const collegeCode = searchParams.get('collegeCode')
 
     if (taskId) {
-      const task = await getTaskById(taskId)
+      const task = await getTaskById(taskId, collegeCode ?? undefined)
       return NextResponse.json(task)
     } else {
-      const tasks = await getTasks()
+      const tasks = await getTasks(collegeCode ?? undefined)
       return NextResponse.json(tasks)
     }
   } catch (error) {

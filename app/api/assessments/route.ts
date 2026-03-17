@@ -9,16 +9,17 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url)
         const id = searchParams.get('id')
+        const collegeCode = searchParams.get('collegeCode') || undefined
         const schoolId = searchParams.get('schoolId') || undefined
 
         if (id) {
-            const assessment = await getAssessmentById(id)
+            const assessment = await getAssessmentById(id, collegeCode)
             if (!assessment) {
                 return NextResponse.json({ error: 'Assessment not found' }, { status: 404 })
             }
             return NextResponse.json(assessment)
         } else {
-            const assessments = await getAssessments(schoolId)
+            const assessments = await getAssessments(collegeCode, schoolId)
             return NextResponse.json(assessments)
         }
     } catch (error) {
@@ -35,6 +36,11 @@ export async function POST(request: NextRequest) {
         // Validate required fields
         if (!assessment.title || !assessment.questions || assessment.questions.length === 0) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+        }
+
+        // Validate collegeCode is present
+        if (!assessment.collegeCode) {
+            return NextResponse.json({ error: 'College code is required' }, { status: 400 })
         }
 
         // Set timestamps and defaults

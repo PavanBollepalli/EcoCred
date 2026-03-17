@@ -6,10 +6,11 @@ import type { User, Task, Submission, GlobalStats, LessonProgress, School, Calen
 
 
 // User management
-export async function getUsers(): Promise<User[]> {
+export async function getUsers(collegeCode?: string): Promise<User[]> {
   try {
     const db = await getDatabase()
-    const users = await db.collection<User>('users').find({}).toArray()
+    const filter = collegeCode ? { collegeCode } : {}
+    const users = await db.collection<User>('users').find(filter).toArray()
     return users.map(user => ({ ...user, _id: undefined }))
   } catch (error) {
     console.error('Error fetching users:', error)
@@ -33,10 +34,11 @@ export async function saveUser(user: User): Promise<void> {
   }
 }
 
-export async function getCurrentUser(userId: string): Promise<User | null> {
+export async function getCurrentUser(userId: string, collegeCode?: string): Promise<User | null> {
   try {
     const db = await getDatabase()
-    const user = await db.collection<User>('users').findOne({ id: userId })
+    const filter = collegeCode ? { id: userId, collegeCode } : { id: userId }
+    const user = await db.collection<User>('users').findOne(filter)
     return user ? { ...user, _id: undefined } : null
   } catch (error) {
     console.error('Error fetching current user:', error)
@@ -44,10 +46,11 @@ export async function getCurrentUser(userId: string): Promise<User | null> {
   }
 }
 
-export async function getUserByEmail(email: string): Promise<User | null> {
+export async function getUserByEmail(email: string, collegeCode?: string): Promise<User | null> {
   try {
     const db = await getDatabase()
-    const user = await db.collection<User>('users').findOne({ email })
+    const filter = collegeCode ? { email, collegeCode } : { email }
+    const user = await db.collection<User>('users').findOne(filter)
     return user ? { ...user, _id: undefined } : null
   } catch (error) {
     console.error('Error fetching user by email:', error)
@@ -73,10 +76,11 @@ export async function deleteUser(userId: string): Promise<boolean> {
 }
 
 // Task management
-export async function getTasks(): Promise<Task[]> {
+export async function getTasks(collegeCode?: string): Promise<Task[]> {
   try {
     const db = await getDatabase()
-    const tasks = await db.collection<Task>('tasks').find({}).toArray()
+    const filter = collegeCode ? { collegeCode } : {}
+    const tasks = await db.collection<Task>('tasks').find(filter).toArray()
     return tasks.map(task => ({ ...task, _id: undefined }))
   } catch (error) {
     console.error('Error fetching tasks:', error)
@@ -98,10 +102,11 @@ export async function saveTask(task: Task): Promise<void> {
   }
 }
 
-export async function getTaskById(taskId: string): Promise<Task | null> {
+export async function getTaskById(taskId: string, collegeCode?: string): Promise<Task | null> {
   try {
     const db = await getDatabase()
-    const task = await db.collection<Task>('tasks').findOne({ id: taskId })
+    const filter = collegeCode ? { id: taskId, collegeCode } : { id: taskId }
+    const task = await db.collection<Task>('tasks').findOne(filter)
     return task ? { ...task, _id: undefined } : null
   } catch (error) {
     console.error('Error fetching task by ID:', error)
@@ -110,10 +115,11 @@ export async function getTaskById(taskId: string): Promise<Task | null> {
 }
 
 // Submission management
-export async function getSubmissions(): Promise<Submission[]> {
+export async function getSubmissions(collegeCode?: string): Promise<Submission[]> {
   try {
     const db = await getDatabase()
-    const submissions = await db.collection<Submission>('submissions').find({}).toArray()
+    const filter = collegeCode ? { collegeCode } : {}
+    const submissions = await db.collection<Submission>('submissions').find(filter).toArray()
     return submissions.map(submission => ({ ...submission, _id: undefined }))
   } catch (error) {
     console.error('Error fetching submissions:', error)
@@ -148,11 +154,12 @@ export async function deleteSubmission(id: string): Promise<void> {
   }
 }
 
-export async function getSubmissionsByStudent(studentId: string): Promise<Submission[]> {
+export async function getSubmissionsByStudent(studentId: string, collegeCode?: string): Promise<Submission[]> {
   try {
     const db = await getDatabase()
+    const filter = collegeCode ? { studentId, collegeCode } : { studentId }
     const submissions = await db.collection<Submission>('submissions')
-      .find({ studentId }).toArray()
+      .find(filter).toArray()
     return submissions.map(submission => ({ ...submission, _id: undefined }))
   } catch (error) {
     console.error('Error fetching submissions by student:', error)
@@ -160,10 +167,11 @@ export async function getSubmissionsByStudent(studentId: string): Promise<Submis
   }
 }
 
-export async function getSubmissionById(id: string): Promise<Submission | null> {
+export async function getSubmissionById(id: string, collegeCode?: string): Promise<Submission | null> {
   try {
     const db = await getDatabase()
-    const submission = await db.collection<Submission>('submissions').findOne({ id })
+    const filter = collegeCode ? { id, collegeCode } : { id }
+    const submission = await db.collection<Submission>('submissions').findOne(filter)
     return submission ? { ...submission, _id: undefined } : null
   } catch (error) {
     console.error('Error fetching submission by ID:', error)
@@ -171,11 +179,13 @@ export async function getSubmissionById(id: string): Promise<Submission | null> 
   }
 }
 
-export async function getSubmissionsByTask(taskId: string): Promise<Submission[]> {
+export async function getSubmissionsByTask(taskId: string, collegeCode?: string): Promise<Submission[]> {
   try {
     const db = await getDatabase()
+    const filter: any = { taskId }
+    if (collegeCode) filter.collegeCode = collegeCode
     const submissions = await db.collection<Submission>('submissions')
-      .find({ taskId }).toArray()
+      .find(filter).toArray()
     return submissions.map(submission => ({ ...submission, _id: undefined }))
   } catch (error) {
     console.error('Error fetching submissions by task:', error)
@@ -482,10 +492,12 @@ export async function deleteSchool(id: string): Promise<void> {
 }
 
 // Calendar management
-export async function getCalendarEvents(schoolId?: string): Promise<CalendarEvent[]> {
+export async function getCalendarEvents(collegeCode?: string, schoolId?: string): Promise<CalendarEvent[]> {
   try {
     const db = await getDatabase()
-    const filter = schoolId ? { schoolId } : {}
+    const filter: any = {}
+    if (collegeCode) filter.collegeCode = collegeCode
+    if (schoolId) filter.schoolId = schoolId
     return await db.collection<CalendarEvent>('calendarEvents').find(filter).toArray()
   } catch (error) {
     console.error('Error fetching calendar events:', error)
@@ -510,10 +522,11 @@ export async function createCalendarEvent(eventData: Omit<CalendarEvent, 'id'>):
 }
 
 // Seasonal events management
-export async function getSeasonalEvents(): Promise<SeasonalEvent[]> {
+export async function getSeasonalEvents(collegeCode?: string): Promise<SeasonalEvent[]> {
   try {
     const db = await getDatabase()
-    return await db.collection<SeasonalEvent>('seasonalEvents').find({}).toArray()
+    const filter = collegeCode ? { collegeCode } : {}
+    return await db.collection<SeasonalEvent>('seasonalEvents').find(filter).toArray()
   } catch (error) {
     console.error('Error fetching seasonal events:', error)
     return []
@@ -720,10 +733,11 @@ export async function getSchoolRankings(limit: number = 5): Promise<Array<{ scho
 }
 
 // Lesson management
-export async function getLessons(schoolId?: string): Promise<Lesson[]> {
+export async function getLessons(collegeCode?: string, schoolId?: string): Promise<Lesson[]> {
   try {
     const db = await getDatabase()
     const filter: any = { isActive: true }
+    if (collegeCode) filter.collegeCode = collegeCode
     if (schoolId) filter.schoolId = schoolId
     const lessons = await db.collection<Lesson>('lessons').find(filter).sort({ createdAt: -1 }).toArray()
     return lessons.map(lesson => ({ ...lesson, _id: undefined }))
@@ -771,10 +785,12 @@ export async function deleteLesson(id: string): Promise<void> {
   }
 }
 
-export async function getLessonsByTeacher(teacherId: string): Promise<Lesson[]> {
+export async function getLessonsByTeacher(teacherId: string, collegeCode?: string): Promise<Lesson[]> {
   try {
     const db = await getDatabase()
-    const lessons = await db.collection<Lesson>('lessons').find({ createdBy: teacherId }).sort({ createdAt: -1 }).toArray()
+    const filter: any = { createdBy: teacherId }
+    if (collegeCode) filter.collegeCode = collegeCode
+    const lessons = await db.collection<Lesson>('lessons').find(filter).sort({ createdAt: -1 }).toArray()
     return lessons.map(lesson => ({ ...lesson, _id: undefined }))
   } catch (error) {
     console.error('Error fetching lessons by teacher:', error)
@@ -784,10 +800,11 @@ export async function getLessonsByTeacher(teacherId: string): Promise<Lesson[]> 
 
 // ===== BADGE MANAGEMENT =====
 
-export async function getBadges(schoolId?: string): Promise<Badge[]> {
+export async function getBadges(collegeCode?: string, schoolId?: string): Promise<Badge[]> {
   try {
     const db = await getDatabase()
     const filter: any = { isActive: true }
+    if (collegeCode) filter.collegeCode = collegeCode
     if (schoolId) filter.schoolId = schoolId
     const badges = await db.collection<Badge>('badges').find(filter).sort({ createdAt: -1 }).toArray()
     return badges.map(badge => ({ ...badge, _id: undefined }))
@@ -838,10 +855,12 @@ export async function deleteBadge(id: string): Promise<void> {
   }
 }
 
-export async function getBadgesByTeacher(teacherId: string): Promise<Badge[]> {
+export async function getBadgesByTeacher(teacherId: string, collegeCode?: string): Promise<Badge[]> {
   try {
     const db = await getDatabase()
-    const badges = await db.collection<Badge>('badges').find({ createdBy: teacherId }).sort({ createdAt: -1 }).toArray()
+    const filter: any = { createdBy: teacherId }
+    if (collegeCode) filter.collegeCode = collegeCode
+    const badges = await db.collection<Badge>('badges').find(filter).sort({ createdAt: -1 }).toArray()
     return badges.map(badge => ({ ...badge, _id: undefined }))
   } catch (error) {
     console.error('Error fetching badges by teacher:', error)
@@ -920,10 +939,12 @@ export async function getPointsSummary(userId: string): Promise<Record<string, n
 
 // ===== ASSESSMENT SYSTEM =====
 
-export async function getAssessments(schoolId?: string): Promise<Assessment[]> {
+export async function getAssessments(collegeCode?: string, schoolId?: string): Promise<Assessment[]> {
   try {
     const db = await getDatabase()
-    const query = schoolId ? { schoolId, isActive: true } : { isActive: true }
+    const query: any = { isActive: true }
+    if (collegeCode) query.collegeCode = collegeCode
+    if (schoolId) query.schoolId = schoolId
     const assessments = await db.collection<Assessment>('assessments')
       .find(query)
       .sort({ createdAt: -1 })
@@ -935,10 +956,12 @@ export async function getAssessments(schoolId?: string): Promise<Assessment[]> {
   }
 }
 
-export async function getAssessmentById(id: string): Promise<Assessment | null> {
+export async function getAssessmentById(id: string, collegeCode?: string): Promise<Assessment | null> {
   try {
     const db = await getDatabase()
-    const assessment = await db.collection<Assessment>('assessments').findOne({ id })
+    const filter: any = { id }
+    if (collegeCode) filter.collegeCode = collegeCode
+    const assessment = await db.collection<Assessment>('assessments').findOne(filter)
     return assessment ? { ...assessment, _id: undefined } : null
   } catch (error) {
     console.error('Error fetching assessment by ID:', error)

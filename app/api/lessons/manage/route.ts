@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
         const lessonId = searchParams.get('lessonId')
         const schoolId = searchParams.get('schoolId')
         const teacherId = searchParams.get('teacherId')
+        const collegeCode = searchParams.get('collegeCode') || undefined
 
         if (lessonId) {
             const lesson = await getLessonById(lessonId)
@@ -18,10 +19,10 @@ export async function GET(request: NextRequest) {
             }
             return NextResponse.json(lesson)
         } else if (teacherId) {
-            const lessons = await getLessonsByTeacher(teacherId)
+            const lessons = await getLessonsByTeacher(teacherId, collegeCode)
             return NextResponse.json(lessons)
         } else {
-            const lessons = await getLessons(schoolId || undefined)
+            const lessons = await getLessons(collegeCode, schoolId || undefined)
             return NextResponse.json(lessons)
         }
     } catch (error) {
@@ -37,6 +38,17 @@ export async function POST(request: NextRequest) {
         // Validate required fields
         if (!lesson.title || !lesson.content || !lesson.category) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+        }
+
+        // Validate collegeCode is present
+        if (!lesson.collegeCode) {
+            return NextResponse.json({ error: 'College code is required' }, { status: 400 })
+        }
+
+        // Validate category is one of the allowed values, default to "general" if invalid
+        const validCategories = ["planting", "waste", "energy", "water", "aptitude", "general"]
+        if (!validCategories.includes(lesson.category)) {
+            lesson.category = "general" // Default to General Aptitude
         }
 
         // Set timestamps and ensure proper structure
