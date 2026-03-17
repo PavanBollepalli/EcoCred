@@ -92,9 +92,12 @@ function StudentDashboard() {
           setUser(sessionUser) // Fallback to session data
         }
 
-        const allTasks = await getTasks()
-        const allSubmissions = await getSubmissions()
-        const students = await getUsers()
+        const currentUser = freshUser || sessionUser
+        if (!currentUser) return
+
+        const allTasks = await getTasks(currentUser.collegeCode)
+        const allSubmissions = await getSubmissions(currentUser.collegeCode)
+        const students = await getUsers(currentUser.collegeCode)
         const allLessons = await getLessons()
         const studentUsers = students.filter((u) => u.role === "student")
         const sortedStudents = studentUsers.sort((a, b) => b.ecoPoints - a.ecoPoints)

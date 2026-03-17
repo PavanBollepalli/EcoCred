@@ -77,8 +77,18 @@ function TeacherDashboard() {
 
   const loadData = async () => {
     try {
-      const currentUser = getCurrentUserFromSession()
-      const collegeCode = currentUser?.collegeCode
+      const sessionUser = getCurrentUserFromSession()
+      if (!sessionUser) return
+
+      // Fetch fresh user data from database to get correct collegeCode
+      const freshUser = await getCurrentUser(sessionUser.id)
+      const currentUser = freshUser || sessionUser
+      
+      if (freshUser) {
+        setCurrentUser(freshUser) // Update session with fresh data
+      }
+      
+      const collegeCode = currentUser.collegeCode
       
       // Fetch all data with collegeCode filtering
       const allTasks = await getTasks(collegeCode)
