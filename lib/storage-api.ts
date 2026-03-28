@@ -58,7 +58,7 @@ export interface Submission {
   mlConfidence?: number | null
   aiDetectedObjects?: string[]
   aiReasoning?: string
-  collegeCode?: string
+  collegeCode: string
 }
 
 export interface GlobalStats {

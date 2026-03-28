@@ -98,7 +98,7 @@ function StudentDashboard() {
         const allTasks = await getTasks(currentUser.collegeCode)
         const allSubmissions = await getSubmissions(currentUser.collegeCode)
         const students = await getUsers(currentUser.collegeCode)
-        const allLessons = await getLessons()
+        const allLessons = await getLessons(currentUser.collegeCode)
         const studentUsers = students.filter((u) => u.role === "student")
         const sortedStudents = studentUsers.sort((a, b) => b.ecoPoints - a.ecoPoints)
 
@@ -573,12 +573,12 @@ function StudentDashboard() {
 
           {/* Calendar Tab */}
           <TabsContent value="calendar" className="space-y-6">
-            <Calendar schoolId={user.school} showAddEvent={false} userRole={user.role} />
+            <Calendar schoolId={user.school} collegeCode={user.collegeCode} showAddEvent={false} userRole={user.role} />
           </TabsContent>
 
           {/* Events Tab */}
           <TabsContent value="events" className="space-y-6">
-            <SeasonalEvents userRole={user.role} />
+            <SeasonalEvents userRole={user.role} collegeCode={user.collegeCode} />
           </TabsContent>
 
           {/* Announcements Tab */}

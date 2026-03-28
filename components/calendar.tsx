@@ -304,7 +304,8 @@ export function Calendar({ schoolId, collegeCode, showAddEvent = true, userRole 
 function EventForm({ 
   onSave, 
   onCancel, 
-  schoolId 
+  schoolId,
+  collegeCode
 }: { 
   onSave: (data: Omit<CalendarEvent, 'id'>) => void
   onCancel: () => void
@@ -318,7 +319,7 @@ function EventForm({
     endDate: '',
     type: 'event' as CalendarEvent['type'],
     isAllDay: true,
-    createdBy: 'admin' // This should come from current user context
+    createdBy: (() => { try { return JSON.parse(sessionStorage.getItem('ecocred_current_user') || '{}')?.id || 'admin' } catch { return 'admin' } })()
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -326,7 +327,7 @@ function EventForm({
     onSave({
       ...formData,
       schoolId,
-      collegeCode: '', // TODO: Get from props when function params are fixed
+      collegeCode: collegeCode || '',
       createdAt: new Date().toISOString(),
       startDate: new Date(formData.startDate).toISOString(),
       endDate: new Date(formData.endDate).toISOString()

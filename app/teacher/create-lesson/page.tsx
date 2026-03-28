@@ -285,6 +285,7 @@ function CreateLessonForm() {
                     quiz: cleanedQuiz
                 },
                 createdBy: user.id,
+                collegeCode: user.collegeCode,
                 schoolId: user.school,
                 isActive: true,
                 createdAt: new Date().toISOString(),

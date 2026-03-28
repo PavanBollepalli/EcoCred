@@ -68,6 +68,7 @@ function TeacherDashboard() {
   const [students, setStudents] = useState<User[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [badges, setBadges] = useState<BadgeData[]>([])
+  const [completedLessonsCounts, setCompletedLessonsCounts] = useState<Record<string, number>>({})
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null)
   const [selectedStudent, setSelectedStudent] = useState<User | null>(null)
   const [reviewComment, setReviewComment] = useState("")
@@ -98,12 +99,26 @@ function TeacherDashboard() {
       const allLessons = await getLessons(collegeCode)
       const allBadges = await getBadges(collegeCode)
 
+      // Pre-fetch completed lessons counts for all students (async)
+      const countsMap: Record<string, number> = {}
+      await Promise.all(
+        studentUsers.map(async (s) => {
+          try {
+            const count = await getCompletedLessonsCount(s.id)
+            countsMap[s.id] = count
+          } catch {
+            countsMap[s.id] = 0
+          }
+        })
+      )
+
       setUser(currentUser)
       setTasks(allTasks)
       setSubmissions(allSubmissions)
       setStudents(studentUsers)
       setLessons(allLessons)
       setBadges(allBadges)
+      setCompletedLessonsCounts(countsMap)
     } catch (error) {
       console.error('Error loading teacher data:', error)
     }
@@ -315,9 +330,9 @@ function TeacherDashboard() {
                               {task?.category === "water" && <Droplets className="h-5 w-5 text-blue-500" />}
                             </div>
                             <div className="flex-1">
-                              <p className="font-medium">{task?.title}</p>
+                              <p className="font-medium">{task?.title || "Unknown Task"}</p>
                               <p className="text-sm text-muted-foreground">
-                                by {student?.name} • {new Date(submission.submittedAt).toLocaleDateString()}
+                                by {student?.name || "Unknown Student"} • {new Date(submission.submittedAt).toLocaleDateString()}
                               </p>
                             </div>
                             <Badge
@@ -437,7 +452,7 @@ function TeacherDashboard() {
                         .map((student) => {
                           const studentSubmissions = submissions.filter((s) => s.studentId === student.id)
                           const completedTasks = studentSubmissions.filter((s) => s.status === "approved").length
-                          const completedLessons = getCompletedLessonsCount(student.id)
+                          const completedLessons = completedLessonsCounts[student.id] ?? 0
 
                           return (
                             <div
@@ -525,7 +540,7 @@ function TeacherDashboard() {
                             const studentSubmissions = submissions.filter((s) => s.studentId === selectedStudent.id)
                             const completedTasks = studentSubmissions.filter((s) => s.status === "approved").length
                             const pendingTasks = studentSubmissions.filter((s) => s.status === "pending").length
-                            const completedLessons = getCompletedLessonsCount(selectedStudent.id)
+                            const completedLessons = completedLessonsCounts[selectedStudent.id] ?? 0
 
                             return (
                               <>
@@ -1273,28 +1288,7 @@ function TeacherDashboard() {
             <Calendar schoolId={user?.school} collegeCode={user?.collegeCode} showAddEvent={true} userRole={user?.role} />
           </TabsContent>
 
-          {/* Assessments Tab */}
-          <TabsContent value="assessments" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Brain className="h-6 w-6 text-blue-600" />
-                  AI-Powered Assessments
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  Create custom assessments using AI to generate questions based on your syllabus and learning objectives.
-                </p>
-                <Link href="/teacher/create-assessment">
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                    <Brain className="h-4 w-4 mr-2" />
-                    Create New Assessment
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </TabsContent>
+
         </Tabs>
       </div>
 

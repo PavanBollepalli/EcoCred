@@ -498,7 +498,7 @@ export async function getCalendarEvents(collegeCode?: string, schoolId?: string)
     const filter: any = {}
     if (collegeCode) filter.collegeCode = collegeCode
     if (schoolId) filter.schoolId = schoolId
-    return await db.collection<CalendarEvent>('calendarEvents').find(filter).toArray()
+    return (await db.collection<CalendarEvent>('calendarEvents').find(filter).toArray()).map(e => ({ ...e, _id: undefined }))
   } catch (error) {
     console.error('Error fetching calendar events:', error)
     return []
@@ -526,7 +526,7 @@ export async function getSeasonalEvents(collegeCode?: string): Promise<SeasonalE
   try {
     const db = await getDatabase()
     const filter = collegeCode ? { collegeCode } : {}
-    return await db.collection<SeasonalEvent>('seasonalEvents').find(filter).toArray()
+    return (await db.collection<SeasonalEvent>('seasonalEvents').find(filter).toArray()).map(e => ({ ...e, _id: undefined }))
   } catch (error) {
     console.error('Error fetching seasonal events:', error)
     return []
@@ -591,7 +591,7 @@ export async function getAnnouncements(schoolId?: string, targetAudience?: strin
     const filter: any = { isActive: true }
     if (schoolId) filter.schoolId = schoolId
     if (targetAudience) filter.targetAudience = targetAudience
-    return await db.collection<Announcement>('announcements').find(filter).sort({ createdAt: -1 }).toArray()
+    return (await db.collection<Announcement>('announcements').find(filter).sort({ createdAt: -1 }).toArray()).map(a => ({ ...a, _id: undefined }))
   } catch (error) {
     console.error('Error fetching announcements:', error)
     return []
